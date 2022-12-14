@@ -23,8 +23,8 @@ namespace  ft {
         typedef typename allocator_type::const_reference const_reference;
         typedef typename allocator_type::pointer pointer;
         typedef typename allocator_type::const_pointer const_pointer;
-        typedef RandomAccessIterator<T> iterator;
-        typedef RandomAccessIterator<const T> const_iterator;
+        typedef RandomAccessIterator<value_type> iterator;
+        typedef RandomAccessIterator<const  value_type> const_iterator;
         typedef reverse_iterator<const_iterator> const_reverse_iterator;
         typedef reverse_iterator<iterator> reverse_iterator;
         typedef typename IteratorTraits<iterator>::difference_type difference_type;
@@ -50,8 +50,7 @@ namespace  ft {
         Vector(InputIterator first, InputIterator last,
                const allocator_type &alloc = allocator_type())
                 : _data(nullptr), _size(0), _capacity(0), _alloc(alloc) {
-            // @ todo: f(first, last, alloc, InputIterator::iterator_category())
-            // @Todo : check for the iterator category
+            reserve(last - first);
             assign(first, last);
         }
 
@@ -63,8 +62,7 @@ namespace  ft {
         Vector &operator=(const Vector &other) {
             if (this != &other) {
                 _size = other._size;
-                _capacity = other._capacity;
-                _size = other._size;
+                _capacity = _size + 1;
                 _data = _alloc.allocate(_capacity);
                 for (size_type i = 0; i < _size; i++) {
                     _alloc.construct(_data + i, other._data[i]);
@@ -85,58 +83,25 @@ namespace  ft {
         /* *****  modifiers ****/
 
         template <class InputIterator>
-        void assign (InputIterator first, InputIterator last)
-        {
-
-           switch(first.iterator_category) {
-               case std::input_iterator_tag():
-               case std::output_iterator_tag():
-               case std::forward_iterator_tag():
-               case std::bidirectional_iterator_tag():
-                   assign_bidirectionalIterator(first, last);
-                   break;
-               default:
-                   assign_randomAccessIterator(first, last);
-                   break;
+        void assign (InputIterator first, InputIterator last,
+                     typename ft::enable_if<!ft::is_integral<InputIterator>::value>::type* = 0) {
+            {
+                clear();
+                reserve(1);
+                insert(begin(), first, last);
            }
         }
-    private:
-       template<class InputIterator>
-       void assign_bidirectionalIterator(InputIterator first, InputIterator last)
-       {
-          clear();
-            while (first != last)
-            {
-                 push_back(*first);
-                 first++;
-            }
-       }
-       template<class InputIterator>
-       void assign_randomAccessIterator(InputIterator first, InputIterator last)
-       {
-           clear();
-           size_type n = last - first;
-           if (n > _capacity)
-           {
-               _capacity = n;
-               _data = _alloc.allocate(_capacity);
-           }
-           for (size_type i = 0; i < n; i++)
-           {
-               _alloc.construct(_data + i, first[i]);
-           }
-           _size = n;
-       }
-    public:
+
         void assign(size_type n, const value_type &val) {
             clear();
             reserve(n);
             insert(begin(), n , val);
         }
         void push_back(const value_type &val) {
-            if (_size == _capacity) {
+            if (_size >= _capacity) {
                 reserve(_capacity + 1);
             }
+            std::cout << "push_back   " << val <<std::endl;
             _alloc.construct(_data + _size, val);
             _size++;
         }
@@ -146,11 +111,26 @@ namespace  ft {
                 _size--;
             }
         }
+        void resize (size_type n, value_type val = value_type())
+        {
+            if (n > max_size())
+                return ;
+            if (n > _size)
+            {
+                reserve(n);
+                for (size_type i = _size; i < n; i++)
+                    _alloc.construct(_data + i, val);
+            }
+            else if (n < _size)
+                erase(begin() + n, end());
+        }
         iterator insert(iterator position, const value_type &val) {
+
+            reserve(_size + 1);
             if (_size == _capacity)
                 reserve(_size + 1);
             iterator first = begin();
-            difference_type index = position - first;
+            size_type index = position - first;
             if (index == _size) {
                 _alloc.construct(_data + _size, val);
                 _size++;
@@ -166,14 +146,12 @@ namespace  ft {
             return position;
         }
 
-
-
         void insert(iterator position, size_type n, const value_type &val)
         {
             if (_size + n > _capacity)
                 reserve(_size + n);
 
-            difference_type index = position - begin();
+            size_type  index = position - begin();
 
             if (index == _size) {
                 for (size_type i = 0; i < n; i++) {
@@ -191,40 +169,13 @@ namespace  ft {
             _size += n;
         }
         template<class InputIterator>
-        void insert(iterator position, InputIterator first, InputIterator last)
-        {
-            switch (first.itertor_category) {
-                case std::input_iterator_tag():
-                case std::output_iterator_tag():
-                case std::forward_iterator_tag():
-                case std::bidirectional_iterator_tag():
-                    insert_bidirectionalIterator(position, first, last);
-                    break;
-                default:
-                    insert_randomAccessIterator(position, first, last);
-                    break;
-            }
-        }
-    private:
-        template <class InputIterator>
-        void insert_bidirectionalIterator(iterator position, InputIterator first, InputIterator last)
-        {
-            while (first != last)
-            {
-                position = insert(position, *first);
-                first++;
-                position++;
-            }
-        }
-
-        template <class InputIterator>
-        void insert_randomAccessIterator(iterator position, InputIterator first, InputIterator last)
+        void insert(iterator position, InputIterator first, InputIterator last,
+                    typename enable_if<!is_integral<InputIterator>::value>::type * = 0)
         {
             size_type n = last - first;
             if (_size + n > _capacity)
                 reserve(_size + n);
-
-            difference_type index = position - begin();
+            size_type index = position - begin();
 
             if (index == _size) {
                 for (size_type i = 0; i < n; i++) {
@@ -236,13 +187,12 @@ namespace  ft {
                     _alloc.destroy(_data + i - 1);
                 }
                 for (size_type i = 0; i < n; i++) {
-                    _alloc.construct(_data + index + i, first[i]);
+                    _alloc.construct(_data + index + i, *first);
+                    first++;
                 }
             }
             _size += n;
         }
-    public:
-
 
         iterator erase (iterator position) {
             if (position < begin() || position >= end()) {
@@ -289,37 +239,6 @@ namespace  ft {
                 _size = 0;
             }
         }
-//        template <class... Args>
-//        iterator emplace (const_iterator position, Args&&... args)
-//        {
-//            value_type  elements[] = {args...};
-//            difference_type  size = sizeof...(args);
-//            difference_type index = position - begin();
-//            reserve(_size + size);
-//            if (index == _size) {
-//                for (size_type i = 0; i < size; i++)
-//                    push_back(elements[i]);
-//            } else {
-//                for (size_type i = index; i <_size ;i++)
-//                {
-//                    _alloc.construct(_data + i + size, _data[i]);
-//                    _alloc.destroy(_data + i);
-//                }
-//                for (size_type i = 0; i < size; i++)
-//                    _alloc.construct(_data + index + i, elements[i]);
-//                _size += size;
-//            }
-//            return begin() + index;
-//        }
-//        template <class... Args>
-//        void emplace_back (Args&&... args)
-//        {
-//            value_type elements[] = {args...};
-//            difference_type size = sizeof...(args);
-//            reserve(_size + size);
-//            for (size_type i = 0; i < size; i++)
-//                push_back(elements[i]);
-//        }
 
         ///  element Access
         reference operator[](size_type n) {
@@ -330,12 +249,12 @@ namespace  ft {
         }
         reference at(size_type n) {
             if (n >= _size)
-                throw ft::OutOfBoundExecption("vector::at");
+                throw std::out_of_range("out of range");
             return _data[n];
         }
         const_reference at(size_type n) const {
             if (n >= _size)
-                throw ft::OutOfBoundExecption("vector::at -> const_reference");
+                throw std::out_of_range("vector::at -> const_reference");
             return _data[n];
         }
         reference front() {
@@ -366,6 +285,8 @@ namespace  ft {
 
         void reserve(size_type n)
         {
+            if (n > max_size())
+                return ;
             if (_capacity > n + _size)
                 return ;
             size_type  old_capacity = _capacity;
@@ -373,7 +294,10 @@ namespace  ft {
                 _capacity = n + size()  + 1;
             else
                 _capacity = _capacity * GOLDEN_RATIO;
+            if (_capacity >= max_size())
+               _capacity = max_size() -1;
             pointer tmp = _alloc.allocate(_capacity);
+
           if (_data != nullptr) {
               for (size_type i = 0; i < _size; i++) {
                   _alloc.construct(tmp + i, _data[i]);
@@ -404,29 +328,43 @@ namespace  ft {
 
 
    // iterators:
-        iterator begin() const {
+        iterator begin()  {
             return iterator(_data);
+        }
+        const_iterator begin() const {
+            return const_iterator(_data);
         }
         const_iterator cbegin() const {
             return const_iterator(_data);
         }
-        iterator end()  const{
-            return iterator(_data + _size);
+        iterator end()  {
+            return iterator(_data + (_size )  );
         }
+        const_iterator end() const {
+            return const_iterator(_data + (_size )  );
+        }
+
         const_iterator cend() const {
-            return const_iterator(_data + _size);
+            return const_iterator(_data + (_size) );
         }
-        reverse_iterator rbegin() const {
-            return reverse_iterator(end());
+        reverse_iterator rbegin()  {
+            return reverse_iterator(_data + _size  ) ;
         }
+        const_reverse_iterator rbegin() const {
+            return const_reverse_iterator(_data + _size  ) ;
+        }
+
         const_reverse_iterator crbegin() const {
-            return const_reverse_iterator(end());
+            return const_reverse_iterator(_data + _size );
         }
-        reverse_iterator rend() const{
-            return reverse_iterator(begin());
+         reverse_iterator rend() {
+            return reverse_iterator(_data );
+        }
+        const_reverse_iterator rend() const {
+            return const_reverse_iterator(_data );
         }
         const_reverse_iterator crend() const {
-            return const_reverse_iterator(begin());
+            return const_reverse_iterator(_data );
         }
         allocator_type get_allocator() const
         {
