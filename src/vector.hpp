@@ -48,9 +48,9 @@ namespace  ft {
 
         template<class InputIterator>
         Vector(InputIterator first, InputIterator last,
-               const allocator_type &alloc = allocator_type())
+               const allocator_type &alloc = allocator_type(),
+               typename ft::enable_if<!ft::is_integral<InputIterator>::value>::type* = 0)
                 : _data(nullptr), _size(0), _capacity(0), _alloc(alloc) {
-            reserve(last - first);
             assign(first, last);
         }
 
@@ -87,8 +87,13 @@ namespace  ft {
                      typename ft::enable_if<!ft::is_integral<InputIterator>::value>::type* = 0) {
             {
                 clear();
-                reserve(1);
-                insert(begin(), first, last);
+                difference_type  n = std::distance(first, last);
+                reserve(n);
+                for (difference_type i = 0; i < n; i++) {
+                   _alloc.construct(_data + i, *first);
+                   _size++;
+                    first++;
+                }
            }
         }
 
@@ -98,10 +103,8 @@ namespace  ft {
             insert(begin(), n , val);
         }
         void push_back(const value_type &val) {
-            if (_size >= _capacity) {
-                reserve(_capacity + 1);
-            }
-            std::cout << "push_back   " << val <<std::endl;
+            if(_size >= _capacity )
+                reserve(_capacity +1);
             _alloc.construct(_data + _size, val);
             _size++;
         }
@@ -115,14 +118,21 @@ namespace  ft {
         {
             if (n > max_size())
                 return ;
-            if (n > _size)
+            if (n < _size)
             {
-                reserve(n);
+                for (size_type i = n; i < _size; i++)
+                    _alloc.destroy(_data + i);
+                _size  = n;
+            }
+            else if (n > _size)
+            {
+                if (n > _capacity)
+                    reserve(n);
+
                 for (size_type i = _size; i < n; i++)
                     _alloc.construct(_data + i, val);
+                _size = n;
             }
-            else if (n < _size)
-                erase(begin() + n, end());
         }
         iterator insert(iterator position, const value_type &val) {
 
@@ -130,7 +140,7 @@ namespace  ft {
             if (_size == _capacity)
                 reserve(_size + 1);
             iterator first = begin();
-            size_type index = position - first;
+            size_type index = std::distance(first, position);
             if (index == _size) {
                 _alloc.construct(_data + _size, val);
                 _size++;
@@ -151,7 +161,7 @@ namespace  ft {
             if (_size + n > _capacity)
                 reserve(_size + n);
 
-            size_type  index = position - begin();
+            size_type  index = std::distance(position, begin());
 
             if (index == _size) {
                 for (size_type i = 0; i < n; i++) {
@@ -176,12 +186,11 @@ namespace  ft {
             if (_size + n > _capacity)
                 reserve(_size + n);
             size_type index = position - begin();
-
             if (index == _size) {
                 for (size_type i = 0; i < n; i++) {
                     _alloc.construct(_data + _size + i, first[i]);
                 }
-            } else {
+            } else  {
                 for (size_type i = _size; i > index; i--) {
                     _alloc.construct(_data + i + n - 1, _data[i - 1]);
                     _alloc.destroy(_data + i - 1);
@@ -214,14 +223,16 @@ namespace  ft {
             if (first < begin() || first >= end() || last < begin() || last >= end()) {
                 return end();
             }
-            difference_type index = first - begin();
-            difference_type size = last - first;
-            for (size_type i = index; i <_size ; i++)
+            difference_type index = std::distance(begin(), first);
+            difference_type size = std::distance(first, last);
+            difference_type i = 0;
+            for (i = index; i < size ; i++)
                 _alloc.destroy(_data + i);
-            for (size_type i = index; i < _size - size; i++)
+            for (size_type j = i; j <  _size; j++)
             {
-                _alloc.construct(_data + i, _data[i + size]);
-                _alloc.destroy(_data + i + size);
+                _alloc.construct(_data + index, _data[ j ]);
+                _alloc.destroy(_data + j);
+                index++;
             }
             return begin() + index;
         }
@@ -258,16 +269,16 @@ namespace  ft {
             return _data[n];
         }
         reference front() {
-             return _data[0];
+               return _data[0];
         }
         const_reference front() const {
-                return _data[0];
+            return _data[0];
         }
         reference back() {
-                return _data[_size - 1];
+            return _data[_size - 1];
         }
         const_reference back() const {
-                return _data[_size - 1];
+            return _data[_size - 1];
         }
         pointer data() {
             return _data;
@@ -283,29 +294,25 @@ namespace  ft {
             return _alloc.max_size();
         }
 
-        void reserve(size_type n)
+        void reserve(size_type  n)
         {
-            if (n > max_size())
-                return ;
-            if (_capacity > n + _size)
-                return ;
-            size_type  old_capacity = _capacity;
-            if ((_capacity * GOLDEN_RATIO) < (n + size() + 1) )
-                _capacity = n + size()  + 1;
-            else
-                _capacity = _capacity * GOLDEN_RATIO;
-            if (_capacity >= max_size())
-               _capacity = max_size() -1;
-            pointer tmp = _alloc.allocate(_capacity);
+//            if (n > max_size())
+//                return ;
 
-          if (_data != nullptr) {
-              for (size_type i = 0; i < _size; i++) {
-                  _alloc.construct(tmp + i, _data[i]);
-                  _alloc.destroy(_data + i);
-              }
-              _alloc.deallocate(_data, old_capacity);
-          }
-          _data = tmp;
+            if ( _capacity < n)
+            {
+                if(n < _capacity * 2)
+                    n = _capacity * 2;
+                pointer tmp = _alloc.allocate(n);
+                for (size_type i = 0; i < _size; i++)
+                {
+                    _alloc.construct(tmp + i, _data[i]);
+                    _alloc.destroy(_data + i);
+                }
+                _alloc.deallocate(_data, _capacity);
+                _data = tmp;
+                _capacity = n;
+            }
         }
         size_type capacity() const {
             return _capacity;
