@@ -61,12 +61,11 @@ namespace  ft {
 
         Vector &operator=(const Vector &other) {
             if (this != &other) {
-                _size = other._size;
-                _capacity = _size + 1;
+                _size = other.size();
+                _capacity = other.capacity();
                 _data = _alloc.allocate(_capacity);
-                for (size_type i = 0; i < _size; i++) {
-                    _alloc.construct(_data + i, other._data[i]);
-                }
+                for (size_type i = 0; i < _size; i++)
+                    _alloc.construct(_data + i, other[i]);
             }
             return *this;
         }
@@ -224,24 +223,32 @@ namespace  ft {
 
         iterator erase (iterator first, iterator last)
         {
-            if (first < begin() || first >= end() || last < begin() || last >= end()) {
+            if (first < begin() || first >= end() || last <= begin() || last > end()) {
                 return end();
             }
             size_type index = std::distance(begin(), first);
             size_type size = std::distance(first, last);
             for (size_type i =0 ; i < size; i++)
                 _alloc.destroy(_data + index + i);
-            for (size_type i = 0; i < _size - size; i++)
+            for ( size_type i = 0; i < _size - index - size; i++)
             {
-                _alloc.construct(_data + index + i, _data[_size - i]);
+                _alloc.construct(_data  + index + i, _data[index + size + i]);
+                _alloc.destroy(_data + index + size  + i);
             }
+            _size -= size;
             return begin() + index;
         }
         void swap (Vector& x)
         {
-            Vector tmp = *this;
-            *this = x;
-            x = tmp;
+            size_type xSize = x.size();
+            size_type xCapacity = x.capacity();
+            pointer xData = (pointer) x.data();
+            x._data = _data;
+            x._size = _size;
+            x._capacity = _capacity;
+            _data = xData;
+            _size = xSize;
+            _capacity = xCapacity;
         }
         void clear() {
             if (_data != nullptr) {
@@ -414,12 +421,12 @@ namespace  ft {
     template <class T, class Alloc>
     bool operator <= (const Vector<T,Alloc>& lhs, const Vector<T,Alloc>& rhs)
     {
-        return  !(lhs > rhs);
+        return lhs < rhs || lhs == rhs;
     }
     template <class T, class Alloc>
     bool operator> (const Vector<T, Alloc> & lhs, const Vector<T, Alloc> &rhs)
     {
-        return !(lhs < rhs);
+        return !(lhs <= rhs);
     }
     template<class T, class Alloc>
     bool operator>= (const Vector<T, Alloc> & lhs, const Vector<T, Alloc> &rhs)
@@ -430,9 +437,7 @@ namespace  ft {
     template <class T, class Alloc>
     void swap (Vector<T,Alloc>& x, Vector<T,Alloc>& y)
     {
-        Vector<T, Alloc> tmp = x;
         x.swap(y);
-        y.swap(tmp);
     }
 };
 #endif //FT_CONTAINERS_VECTOR_HPP
