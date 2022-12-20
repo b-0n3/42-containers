@@ -2,7 +2,7 @@
 // Created by Abdelouahad Ait hamd on 12/8/22.
 //
 
-#include "./src/vector.hpp"
+#include "src/vector/Vector.hpp"
 #include <iostream>
 
 int main() {

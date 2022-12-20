@@ -7,11 +7,11 @@
 
 #include <stdexcept>
 #include <iostream>
-#include "RandomAccessIterator.h"
-#include "IteratorTraits.h"
-#include "reverse_iterator.h"
-#include "Forward.hpp"
-#include "exceptions/OutOfBoundExecption.h"
+#include "../iterators/RandomAccessIterator.h"
+#include "../iterators/IteratorTraits.h"
+#include "../iterators/reverse_iterator.h"
+#include "../utility/Forward.hpp"
+#include "../exceptions/OutOfBoundExecption.h"
 
 namespace  ft {
     template<class T, class Alloc = std::allocator <T> >

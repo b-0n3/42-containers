@@ -28,8 +28,4 @@ namespace ft {
     template<> struct is_integral<long long> : public true_type {};
     template<> struct is_integral<unsigned long long> : public true_type {};
 
-
-
-    template <class T> struct is_InputIterator : public false_type {};
-    template <> struct is_InputIterator<std::input_iterator_tag> : public true_type {};
 }
