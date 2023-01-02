@@ -10,13 +10,13 @@ namespace ft {
     template<class Key,
             class T,
             class Compare = std::less<Key>,
-            class Alloc = std::allocator <ft::Pair<const Key, T>>
+            class Alloc = std::allocator <ft::pair<const Key, T>>
     >
-    class map {
+    class Map {
     public:
         typedef  Key key_type;
         typedef  T mapped_type;
-        typedef  ft::Pair<key_type , mapped_type> value_type;
+        typedef  ft::pair<key_type , mapped_type> value_type;
         typedef Compare key_compare;
        // @TODO add value_compaer
 
@@ -32,7 +32,7 @@ namespace ft {
         typedef size_t  size_type;
 
     private:
-        ft::RedBlackTree<pointer> *_tree;
+//        ft::RedBlackTree<pointer> *_tree;
 
 
     public:
