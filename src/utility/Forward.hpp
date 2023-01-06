@@ -7,6 +7,5 @@
 #define null nullptr
 #define _RED "\e[0;31m"
 #define _WHITE "\e[0m"
-
 #include "../algo/Enable_if.hpp"
 #include "../algo/IsIntegral.hpp"

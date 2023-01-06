@@ -6,10 +6,27 @@
 
 #include <iostream>
 #include <iomanip>
+#include <sstream>
 #include "color.hpp"
 #include "NodeType.hpp"
 #include "../utility/Forward.hpp"
+#include "../vector/Vector.hpp"
+
 namespace ft {
+    struct Trunk {
+        Trunk *prev;
+        std::string str;
+        Trunk( Trunk *prev, std::string str ) { this->prev = prev; this->str = str; }
+    };
+    void showTrunks(Trunk *p) {
+        if (p == nullptr) {
+            std::cout << std::endl;
+            return ;
+        }
+
+        showTrunks(p->prev);
+        std::cout << p->str;
+    }
     template<class T>
     class Node {
     public:
@@ -22,7 +39,8 @@ namespace ft {
                 parent(null),
                 left(null),
                 right(null),
-                color(BLACK) {
+                color(BLACK)
+        {
         }
         virtual  node_type  getType() = 0;
         virtual ~Node(){}
@@ -45,14 +63,82 @@ namespace ft {
             color = rhs.color;
                 return *this;
         }
-        node_pointer getUncle(bool isLeft)
+        node_pointer getUncle()
         {
-            ft::Node<T> *grandParent = getGrandParent();
-           return isLeft ? grandParent->getLeft() : grandParent->getRight();
+           if (whoAmI())
+           {
+               return getParent()->getRight();
+           }
+           return getParent()->getLeft();
         }
+        node_pointer getSibling(bool r)
+        {
+            if (r)
+                return getParent()->getRight();
+            return getParent()->getLeft();
+        }
+        bool isUncleRed()
+        {
+            return getUncle()->isRed();
+        }
+        bool isParentBlack()
+        {
+            return !getParent()->isRed();
+        }
+        bool isRed(){
+            return color == RED;
+        }
+        void makeMeBlack()
+        {
+            setColor(BLACK);
+        }
+        void makeMeRed()
+        {
+            if (!isLeaf())
+                  setColor(RED);
+        }
+        void makeParentBlack()
+        {
+            getParent()->makeMeBlack();
+        }
+        void makeParentRed()
+        {
+            getParent()->makeMeRed();
+        }
+        void makeUncleRed()
+        {
+            getUncle()->makeMeRed();
+        }
+        void makeUncleBlack()
+        {
+            getUncle()->makeMeBlack();
+        }
+
         node_pointer getGrandParent()
         {
             return this->getParent()->getParent();
+        }
+        bool isLeaf()
+        {
+            return getType() == LEAF;
+        }
+        bool  isLeftLeaf()
+        {
+            return left != null && left->isLeaf();
+        }
+        bool isRightLeaf()
+        {
+            return right != null && right->isLeaf();
+        }
+
+
+        bool isParentLeaf()
+        {
+            return getParent() == null || getParent()->isLeaf();
+        }
+        void setValue(value_type v)
+        {
+            value = v;
         }
         value_type getValue(){
             return value;
@@ -82,7 +168,13 @@ namespace ft {
         Color getColor() const {
             return color;
         }
-        virtual void  print() = 0;
+        bool whoAmI()
+        {
+            return this->getParent()->getLeft() == this;
+        }
+//        virtual void  print(logArray &list, size_t level, int maxWidth) = 0;
+        virtual  void  print(Trunk *prev) = 0;
+
     protected:
         Node(value_type const value,node_pointer left, node_pointer right, node_pointer parent):
         value(value),
@@ -98,6 +190,8 @@ namespace ft {
         Color color;
 
 
+
+
     };
 
     template<class T>
@@ -107,9 +201,19 @@ namespace ft {
 
          ~LeafNode(){}
          LeafNode(): Node<T>(){}
-         void print(){
-              std::cout  << "LEAF";
-         }
+        void print(Trunk *prev)
+        {
+            std::string prev_str = "    ";
+            Trunk *trunk = new Trunk(prev, prev_str);
+            if (!prev) { trunk->str = "——— "; }
+            else if (this->whoAmI()) { trunk->str = " .——— "; prev_str = "   |"; }
+            else {
+                trunk->str = " `——— ";
+                prev->str = prev_str;
+            }
+            showTrunks(trunk);
+            std::cout <<"(LEAF)" << std::endl;
+        }
          size_t  getHeight() {return 0;}
     };
 
@@ -135,46 +239,49 @@ namespace ft {
         {
         }
 
-        void print()
-        {
-            size_t h = this->getHeight();
+//        void print(logArray &list, size_t level, int maxWidth){
+//        {
+//
+//        }
+            void print( Trunk *prev) {
 
-             std::cout << " " << std::setw(h * 4)  << (this->getColor() == RED ? " RED": "BLACK") << std::endl;
-            this->getLeft()->print();  std::cout << "  /  "  ;
-            std::cout << "  \\  " ;  this->getRight()->print();
+//            std::cout << indent;
+//       if (!this->whoAmI()) {
+//         std::cout << "R----  ";
+//         indent += "   ";
+//       } else {
+//         std::cout << "L----  ";
+//         indent += "|  ";
+//       }
+//
+//            bool isRed = this->getColor() == RED;
+//              std::string sColor = (isRed ? "R": "B");
+//              std::cout <<(isRed? _RED : "" )<< *this->getValue() <<" (" << sColor <<  ")" << _WHITE << std::endl;
+//              this->getLeft()->print(indent);
+              //this->getRight()->print(indent);
+              std::string prev_str = "    ";
+              Trunk *trunk = new Trunk(prev, prev_str);
+              this->getRight()->print(trunk);
+              if (!prev) { trunk->str = "——— "; }
+              else if (this->whoAmI()) { trunk->str = " .——— "; prev_str = "   |"; }
+              else {
+                  trunk->str = " `——— ";
+                  prev->str = prev_str;
+              }
+              showTrunks(trunk);
 
+              std::string sColor = (this->isRed() ? "R": "B");
+              std::cout <<(this->isRed() ? _RED : "" )<< *this->getValue() <<" (" << sColor << " " << (this->whoAmI() ? "L" : "R") <<  ")" << _WHITE << std::endl;
+              if (prev) {
+                  prev->str = prev_str;
+              }
+              trunk->str = "   |";
+              this->getLeft()->print(trunk);
+          }
 
-        }
         size_t  getHeight() {
-
             return 1 +  std::max(this->getRight()->getHeight(), this->getLeft()->getHeight());
         }
     };
-//    template<class T>
-//    std::ostream &operator<<(std::ostream &os, ft::ValueNode<T> &rhs)
-//    {
-//        size_t h = rhs.getHeight();
-//        os<< std::setw((int) h * 4);
-//         os << rhs.getValue() << (rhs.getColor() == RED ? _RED : _WHITE );
-//         os << std::endl;
-//         os << std::setw(((int ) (h * 4)) - 6 ) << "/" << "     \\" << std::endl;
-//         return os;
-//    }
-//
-//    template<class T>
-//    std::ostream  &operator<<(std::ostream &os, ft::LeafNode<T> &rhs)
-//    {
-//        if (rhs.getType() == LEAF)
-//            os << "LEAF" <<  std::endl;
-//        return os;
-//    }
-//    template<class T>
-//    std::ostream  &operator<<(std::ostream &os, ft::Node<T> &rhs)
-//    {
-//        if (rhs.getType() == LEAF)
-//            os << ((ft::LeafNode<T> *) &rhs);
-//        else if (rhs.getType() == REGULAR)
-//            os << ((ft::ValueNode<T> *) &rhs);
-//        return os;
-//    }
+
 }
