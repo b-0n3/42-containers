@@ -11,6 +11,7 @@
 #include "NodeType.hpp"
 #include "../utility/Forward.hpp"
 #include "../vector/Vector.hpp"
+#include "../optional/optional.hpp"
 
 namespace ft {
     struct Trunk {
@@ -33,35 +34,78 @@ namespace ft {
         typedef T value_type;
         typedef ft::Node<T> node_t;
         typedef ft::Node<T> *node_pointer;
-        typedef ft::Node<T>& node_reference;
+        typedef ft::Node<T> &node_reference;
+        typedef ft::Optional<node_pointer> node_optional;
+        typedef ft::Optional<bool *> bool_optional;
+
         Node() :
                 value(null),
                 parent(null),
                 left(null),
                 right(null),
-                color(BLACK)
-        {
+                color(BLACK) {
         }
-        virtual  node_type  getType() = 0;
-        virtual ~Node(){}
-        Node(ft::Node<T> const &rhs):
-        value(rhs.value),
-        parent(rhs.parent),
-        left(rhs.left),
-        right(rhs.right),
-        color(rhs.color)
-        {}
-        virtual size_t  getHeight() = 0;
-        ft::Node<T> &operator=(ft::Node<T> const &rhs)
-        {
+
+        virtual node_type getType() = 0;
+
+        virtual ~Node() {}
+
+        Node(ft::Node<T> const &rhs) :
+                value(rhs.value),
+                parent(rhs.parent),
+                left(rhs.left),
+                right(rhs.right),
+                color(rhs.color) {}
+
+        virtual size_t getHeight() = 0;
+
+        ft::Node<T> &operator=(ft::Node<T> const &rhs) {
             if (this == &rhs)
                 return *this;
             value = rhs.value;
             parent = rhs.parent;
-            left= rhs.parent;
+            left = rhs.parent;
             right = rhs.right;
             color = rhs.color;
-                return *this;
+            return *this;
+        }
+        node_optional getSiblingOptional()
+        {
+            if (getType() == LEAF)
+                return node_optional::empty();
+            node_optional p = getParentOptional();
+            if (p.isPresent())
+            {
+                if (whoAmI())
+                    return p.get()->getRightOptional();
+                return p.get()->getLeftOptional();
+            }
+            return node_optional::empty();
+        }
+
+        node_optional  getParentOptional()
+        {
+             return node_optional::ofNullable(parent);
+        }
+        node_optional getLeftOptional()
+        {
+            if (getType() == LEAF)
+                return node_optional::empty();
+            return Optional<node_pointer>::ofNullable(left);
+        }
+
+        node_optional getRightOptional()
+        {
+            if (getType() == LEAF)
+                return node_optional::empty();
+            return node_optional::ofNullable(right);
+        }
+        bool isBothChildsBlack()
+        {
+            node_optional l = getLeftOptional();
+            node_optional r = getRightOptional();
+            return l.isPresent() && !l.get()->isRed()&&
+                            r.isPresent() && !r.get()->isRed();
         }
         node_pointer getUncle()
         {
@@ -71,12 +115,14 @@ namespace ft {
            }
            return getParent()->getLeft();
         }
+
         node_pointer getSibling(bool r)
         {
             if (r)
                 return getParent()->getRight();
             return getParent()->getLeft();
         }
+
         bool isUncleRed()
         {
             return getUncle()->isRed();
@@ -124,11 +170,11 @@ namespace ft {
         }
         bool  isLeftLeaf()
         {
-            return left != null && left->isLeaf();
+            return left->isLeaf();
         }
         bool isRightLeaf()
         {
-            return right != null && right->isLeaf();
+            return right->isLeaf();
         }
 
 
@@ -170,6 +216,8 @@ namespace ft {
         }
         bool whoAmI()
         {
+            if (getType() == LEAF)
+                return true;
             return this->getParent()->getLeft() == this;
         }
 //        virtual void  print(logArray &list, size_t level, int maxWidth) = 0;
@@ -271,7 +319,17 @@ namespace ft {
               showTrunks(trunk);
 
               std::string sColor = (this->isRed() ? "R": "B");
-              std::cout <<(this->isRed() ? _RED : "" )<< *this->getValue() <<" (" << sColor << " " << (this->whoAmI() ? "L" : "R") <<  ")" << _WHITE << std::endl;
+              std::cout
+              << (this->isRed() ? _RED : "")
+              <<  *this->getValue()
+              << " (" << sColor
+              << " "
+              << (this->whoAmI() ? "LEFT" : "RIGHT")
+              <<  " ";
+              if (!this->isParentLeaf())
+                  std::cout <<   *this->getParent()->getValue();
+              std::cout <<" )"
+              << _WHITE << std::endl;
               if (prev) {
                   prev->str = prev_str;
               }

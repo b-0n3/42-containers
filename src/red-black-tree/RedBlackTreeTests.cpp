@@ -24,28 +24,29 @@ int main()
         }
     }
 
-//    printHeader();
-//    std::string v;
-//    std::string input;
-//    std::cin >> input;
+    printHeader();
+    std::string v;
+    std::string input;
+    std::cin >> input;
 
-//    while(1) {
-//        printHeader();
-//        if (input == "e")
-//            break;
-//        if (input == "i")
-//        {
-//            std::cin >> v;
-//
-//            rbl.insert(std::atoi(v.c_str()));
-//        }
-//        if (input == "d")
-//        {
-//            std::cin >> v;
-//            rbl.erase(std::atoi(v.c_str()));
-//        }
-//        std::cin >> input;
-//    }
+    while(1) {
+
+        if (input == "e")
+            break;
+        if (input == "i")
+        {
+            std::cin >> v;
+
+            rbl.insert(std::atoi(v.c_str()));
+        }
+        if (input == "d")
+        {
+            std::cin >> v;
+            rbl.erase(std::atoi(v.c_str()));
+        }
+        printHeader();
+        std::cin >> input;
+    }
 //    std::cout << "insertion" << std::endl;
 //    for (int i =0; i< size ;i ++ )
 //    {
