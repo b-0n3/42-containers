@@ -71,8 +71,8 @@ namespace ft {
         }
         node_optional getSiblingOptional()
         {
-            if (getType() == LEAF)
-                return node_optional::empty();
+//            if (getType() == LEAF)
+//                return node_optional::empty();
             node_optional p = getParentOptional();
             if (p.isPresent())
             {
@@ -100,6 +100,20 @@ namespace ft {
                 return node_optional::empty();
             return node_optional::ofNullable(right);
         }
+        bool isMyRightChild(node_pointer other)
+        {
+            if (other == null)
+                return false;
+            node_optional  r = getRightOptional();
+            return r.isPresent() && r.get() == other;
+        }
+        bool isMyLeftChild(node_pointer other)
+        {
+            if (other == null)
+                return false;
+            node_optional  l = getLeftOptional();
+            return l.isPresent() && l.get() == other;
+        }
         bool isBothChildsBlack()
         {
             node_optional l = getLeftOptional();
@@ -107,26 +121,8 @@ namespace ft {
             return l.isPresent() && !l.get()->isRed()&&
                             r.isPresent() && !r.get()->isRed();
         }
-        node_pointer getUncle()
-        {
-           if (whoAmI())
-           {
-               return getParent()->getRight();
-           }
-           return getParent()->getLeft();
-        }
 
-        node_pointer getSibling(bool r)
-        {
-            if (r)
-                return getParent()->getRight();
-            return getParent()->getLeft();
-        }
 
-        bool isUncleRed()
-        {
-            return getUncle()->isRed();
-        }
         bool isParentBlack()
         {
             return !getParent()->isRed();
@@ -140,8 +136,7 @@ namespace ft {
         }
         void makeMeRed()
         {
-            if (!isLeaf())
-                  setColor(RED);
+            setColor(RED);
         }
         void makeParentBlack()
         {
@@ -151,13 +146,12 @@ namespace ft {
         {
             getParent()->makeMeRed();
         }
-        void makeUncleRed()
+        void makeMeTheParentOfMyChilds()
         {
-            getUncle()->makeMeRed();
-        }
-        void makeUncleBlack()
-        {
-            getUncle()->makeMeBlack();
+             if (!isLeftLeaf())
+                 left->setParent(this);
+             if (!isRightLeaf())
+                 right->setParent(this);
         }
 
         node_pointer getGrandParent()
@@ -170,11 +164,18 @@ namespace ft {
         }
         bool  isLeftLeaf()
         {
-            return left->isLeaf();
+            if (getType() == LEAF)
+                return true;
+            return getLeftOptional().isPresent()
+            && left->isLeaf();
         }
         bool isRightLeaf()
         {
-            return right->isLeaf();
+            if (getType() == LEAF)
+                return true;
+            return getRightOptional().isPresent()
+            &&
+            right->isLeaf();
         }
 
 
@@ -216,9 +217,13 @@ namespace ft {
         }
         bool whoAmI()
         {
-            if (getType() == LEAF)
-                return true;
-            return this->getParent()->getLeft() == this;
+           node_optional p = getParentOptional();
+            if (p.isPresent())
+            {
+                node_optional l = p.get()->getLeftOptional();
+                return l.isPresent()  && l.get() == this;
+            }
+            return false;
         }
 //        virtual void  print(logArray &list, size_t level, int maxWidth) = 0;
         virtual  void  print(Trunk *prev) = 0;

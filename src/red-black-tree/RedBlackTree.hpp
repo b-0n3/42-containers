@@ -27,7 +27,7 @@ namespace ft {
     /*
      *  @TODO: create documentation of insertCases
      */
-    enum insertCases{
+    enum insertCases {
         LL,
         LR,
         RL,
@@ -65,6 +65,7 @@ namespace ft {
         node_type_pointer root;
         compare_type compare;
         node_type_pointer current;
+        node_type_pointer leafNodeReplacment;
     public:
         explicit RedBlackTree(const allocator_type _alloc = allocator_type(),
                               const value_node_alloc _value_node_alloc = value_node_alloc(),
@@ -75,7 +76,8 @@ namespace ft {
             _leaf_node_alloc(_leaf_node_alloc),
             leafNode(createLeafNode()),
             root(leafNode),
-            compare(compare) {
+            compare(compare),
+            leafNodeReplacment(null) {
         }
 
         RedBlackTree(const_reference val,
@@ -88,32 +90,37 @@ namespace ft {
                 _leaf_node_alloc(_leaf_node_alloc),
                 leafNode(createLeafNode()),
                 root(leafNode),
-                compare(compare) {
+                compare(compare),
+                leafNodeReplacment(null) {
             insert(val);
         }
 
     public:
-        void logInorderTraversal(node_type_pointer p)
-        {
-            if (!p->isLeaf())
-            {
+        void logInorderTraversal(node_type_pointer p) {
+            if (!p->isLeaf()) {
                 logInorderTraversal(p->getLeft());
                 std::cout << *p->getValue() << " ";
                 logInorderTraversal(p->getRight());
             }
         }
 
-        void log(std::string const &header , bool clear) {
+        void log(std::string const &header, bool clear) {
             if (clear)
-             system("clear ");
+                system("clear ");
             std::cout << std::endl;
             std::cout << header << std::endl;
 
 //            ft::Vector<std::string> list(this->root->getHeight(), " ");
             this->root->print(null);
-            std::cout <<std::endl;;
+            std::cout << std::endl;;
             logInorderTraversal(root);
-            std::cout <<std::endl;;
+            std::cout << std::endl;
+            if (validateTree())
+            {
+                std::cout <<  "TRee is valid" << std::endl;
+            }
+            else
+                std::cout << _RED << "TRee is invalid" << _WHITE << std::endl;
 //            prettiFyOutput(list);
 //            for (size_t i = 0; i < list.size(); i++)
 //                std::cout << list[i] << std::endl;
@@ -122,11 +129,10 @@ namespace ft {
 
         node_type_pointer insert(const_reference val) {
             log("before inserting ", true);
-            bool  isNew = true;
+            bool isNew = true;
             if (root->getType() != LEAF)
                 insertValue(root, val, root, &isNew);
-            else
-            {
+            else {
                 root = createNode(val);
                 root->makeMeBlack();
                 current = root;
@@ -140,11 +146,25 @@ namespace ft {
         node_type_pointer search(const_reference val) {
             return this->search(root, val);
         }
-        void erase(const_reference val)
-        {
+
+        void erase(const_reference val) {
             log("before deleting  ", true);
-            deleteNode( node_optional::ofNullable(root) , val);
+//            node_type_pointer x = search(val);
+//            deleteNode(x);
+            deleteNode(node_optional::ofNullable(root), val);
+            leafNode->setParent(null);
             log("after deleting  ", false);
+        }
+        bool validateTree()
+        {
+            if (root== null || root->isLeaf())
+                return true;
+            if (root->isRed())
+            {
+                std::cout<< "root is not black" << std::endl;
+            }
+            int blackCount =  0;
+            return checkBlackNodeCount(root ,&blackCount, 0) && noRedRedParentChild(root, BLACK);
         }
         // @TODO: add erase By Range
 //        void erase(const_reference val)
@@ -158,7 +178,7 @@ namespace ft {
     private:
 
         node_type_pointer search(node_type_pointer current, const_reference val) {
-            if ( current->getType() == LEAF ||
+            if (current->getType() == LEAF ||
                 (compare(*current->getValue(), val) == compare(val, *current->getValue())))
                 return current;
             if (compare(*current->getValue(), val))
@@ -170,21 +190,17 @@ namespace ft {
         node_type_pointer insertValue(node_type_pointer head,
                                       const_reference val,
                                       node_type_pointer parent,
-                                      bool  *isNew) {
-            if (head->getType() == LEAF)
-            {
-                head = createNode(val, leafNode , leafNode, parent);
+                                      bool *isNew) {
+            if (head->getType() == LEAF) {
+                head = createNode(val, leafNode, leafNode, parent);
                 current = head;
                 return head;
             }
-            if (compare(*head->getValue(), val ))
-            {
-              head->setRight(insertValue(head->getRight(), val, head, isNew));
-            }else if (compare(val, *head->getValue()))
-            {
-               head->setLeft(insertValue(head->getLeft(), val, head, isNew));
-            }
-            else {
+            if (compare(*head->getValue(), val)) {
+                head->setRight(insertValue(head->getRight(), val, head, isNew));
+            } else if (compare(val, *head->getValue())) {
+                head->setLeft(insertValue(head->getLeft(), val, head, isNew));
+            } else {
                 *isNew = false;
                 head->setValue(value2Pointer(val));
             }
@@ -196,52 +212,42 @@ namespace ft {
          *  @Description: maintain RED-Black tree balance after inserting x
          */
         node_type_pointer insertFixUp(node_type_pointer z) {
-                 while (!z->isParentBlack())
-                 {
-                     if (z->getParent()->whoAmI())
-                     {
-                         node_type_pointer  y = z->getGrandParent()->getRight();
-                         if (y->isRed())
-                         {
-                             z->makeParentBlack();
-                             y->makeMeBlack();
-                             z->getParent()->makeParentRed();
-                             z = z->getGrandParent();
-                         }
-                         else {
-                             if (!z->whoAmI())
-                             {
-                                 z = z->getParent();
-                                 rotateLeft(z);
-                             }
-                             z->makeParentBlack();
-                             z->getParent()->makeParentRed();
-                             rotateRight(z->getGrandParent());
-                         }
-                     }
-                     else
-                     {
-                         node_type_pointer  y = z->getGrandParent()->getLeft();
-                         if (y->isRed())
-                         {
-                             z->makeParentBlack();
-                             y->makeMeBlack();
-                             z->getParent()->makeParentRed();
-                             z = z->getGrandParent();
-                         }
-                         else{
-                             if (z->whoAmI())
-                             {
-                                 z = z->getParent();
-                                 rotateRight(z);
-                             }
-                             z->makeParentBlack();
-                             z->getParent()->makeParentRed();
-                             rotateLeft(z->getGrandParent());
-                         }
-                     }
-                 }
-                 root->makeMeBlack();
+            while (!z->isParentBlack()) {
+                if (z->getParent()->whoAmI()) {
+                    node_type_pointer y = z->getGrandParent()->getRight();
+                    if (y->isRed()) {
+                        z->makeParentBlack();
+                        y->makeMeBlack();
+                        z->getParent()->makeParentRed();
+                        z = z->getGrandParent();
+                    } else {
+                        if (!z->whoAmI()) {
+                            z = z->getParent();
+                            rotateLeft(z);
+                        }
+                        z->makeParentBlack();
+                        z->getParent()->makeParentRed();
+                        rotateRight(z->getGrandParent());
+                    }
+                } else {
+                    node_type_pointer y = z->getGrandParent()->getLeft();
+                    if (y->isRed()) {
+                        z->makeParentBlack();
+                        y->makeMeBlack();
+                        z->getParent()->makeParentRed();
+                        z = z->getGrandParent();
+                    } else {
+                        if (z->whoAmI()) {
+                            z = z->getParent();
+                            rotateRight(z);
+                        }
+                        z->makeParentBlack();
+                        z->getParent()->makeParentRed();
+                        rotateLeft(z->getGrandParent());
+                    }
+                }
+            }
+            root->makeMeBlack();
             return z;
         }
 
@@ -279,19 +285,18 @@ namespace ft {
                 y->getLeft()->setParent(x);
             if (!y->isLeaf())
                 y->setParent(x->getParent());
-            if (!x->isParentLeaf())
-            {
+            if (!x->isParentLeaf()) {
                 if (x->whoAmI())
                     x->getParent()->setLeft(y);
                 else
                     x->getParent()->setRight(y);
-            }
-            else
+            } else
                 root = y;
             y->setLeft(x);
             if (!x->isLeaf())
                 x->setParent(y);
         }
+
         /*
         *   @Param : x
         *   @Description: rotate x to right
@@ -319,31 +324,28 @@ namespace ft {
         */
         void rotateRight(node_type_pointer x) {
 
-            node_type_pointer   y  = x->getLeft();
+            node_type_pointer y = x->getLeft();
             x->setLeft(y->getRight());
             if (!y->isRightLeaf())
                 y->getRight()->setParent(x);
             if (!y->isLeaf())
                 y->setParent(x->getParent());
-            if (!x->isParentLeaf())
-            {
+            if (!x->isParentLeaf()) {
                 if (!x->whoAmI())
                     x->getParent()->setRight(y);
                 else
                     x->getParent()->setLeft(y);
-            }else
+            } else
                 root = y;
             y->setRight(x);
             if (!x->isLeaf())
                 x->setParent(y);
         }
 
-        void rotateLeftReplacment(node_type_pointer x, bool recolor)
-        {
-            node_type_pointer  parent = x->getParent();
+        void rotateLeftReplacment(node_type_pointer x, bool recolor) {
+            node_type_pointer parent = x->getParent();
             x->setParent(parent->getParent());
-            if (!parent->isParentLeaf())
-            {
+            if (!parent->isParentLeaf()) {
                 if (!parent->whoAmI())
                     parent->getParent()->setRight(x);
                 else
@@ -353,22 +355,19 @@ namespace ft {
             x->setLeft(parent);
             parent->setParent(x);
             parent->setRight(left);
-            if (!left->isLeaf())
-            {
+            if (!left->isLeaf()) {
                 left->setParent(parent);
             }
-            if (recolor)
-            {
+            if (recolor) {
                 x->makeMeBlack();
                 parent->makeMeRed();
             }
         }
-        void rotateRightReplacement(node_type_pointer x, bool recolor)
-        {
-            node_type_pointer  parent = x->getParent();
+
+        void rotateRightReplacement(node_type_pointer x, bool recolor) {
+            node_type_pointer parent = x->getParent();
             x->setParent(parent->getParent());
-            if (!parent->isParentLeaf())
-            {
+            if (!parent->isParentLeaf()) {
                 if (!parent->whoAmI())
                     parent->getParent()->setRight(x);
                 else
@@ -378,16 +377,15 @@ namespace ft {
             x->setRight(parent);
             parent->setParent(x);
             parent->setLeft(right);
-            if (!right->isLeaf())
-            {
+            if (!right->isLeaf()) {
                 right->setParent(parent);
             }
-            if (recolor)
-            {
+            if (recolor) {
                 x->makeMeBlack();
                 parent->makeMeRed();
             }
         }
+
         /*
        *       @Param : u deleted node
        *       @Param : v replacement of U
@@ -405,8 +403,7 @@ namespace ft {
                 vL   vR             uL   uR
                 if u want to link u child also you need to do it on you own
        */
-        void transplant(node_type_pointer u , node_type_pointer v)
-        {
+        void transplant(node_type_pointer u, node_type_pointer v) {
             if (u->isParentLeaf())
                 root = v;
             else if (u->whoAmI())
@@ -415,32 +412,149 @@ namespace ft {
                 u->getParent()->setRight(v);
             v->setParent(u->getParent());
         }
-        void deleteNode(node_optional head, const_reference val)
-        {
-                if (!head.isPresent() || head.get()->isLeaf())
-                    return;
-                if (isEqual(head.get() ,val))
-                {
-                       node_optional left = head.get()->getLeftOptional();
-                       node_optional right = head.get()->getRightOptional();
-                       if ((left.isPresent() && left.get()->isLeaf())
-                       || (right.isPresent() && right.get()->isLeaf()))
-                       {
-                           fixDoubleBlackNode(head.get());
-                       }
-                       else{
-                           node_type_pointer inorderSuccesor = minimum(head.get()->getRight());
-                           // create other object invalidate any itertor pointing to head
-                            deleteNode(head.get()->getRightOptional() ,*inorderSuccesor->getValue());
-                            cloneNodeAndReplaceData(head.get(), *inorderSuccesor->getValue());
-                       }
+
+//        /*
+//         *
+//         *           P
+//         *          /
+//         *         z
+//                  / \
+//                 s    y
+//
+//         */
+//       void deleteNode (node_type_pointer z)
+//       {
+//            node_type_pointer  y = z, x;
+//            Color yColor = y->getColor();
+//            if (z->isLeftLeaf()) // check the node have one leaf child
+//            {
+//                // exchange z with it's right child
+//                x = z->getRight();
+//                transplant(z, z->getRight());
+//            }
+//            else if (z->isRightLeaf())
+//            {
+//                // exchange z with it's left child
+//                x = z->getLeft();
+//                transplant(z, z->getLeft());
+//            }
+//            else
+//            {  // find the minimum
+//                y = minimum(z->getRight());
+//                yColor = y->getColor();
+//                x = y->getRight();
+//                // check if y is child of
+//                if (y != z->getRight())
+//                {
+//                    transplant(y , y->getRight());
+//                    y->setRight(z->getRight());
+//                    y->getRight()->setParent(y);
+//                }
+//                else
+//                {
+//                    x->setParent(y);
+//                    transplant(z, y);
+//                    y->setLeft(z->getLeft());
+//                    y->getLeft()->setParent(y);
+//                    y->setColor(z->getColor());
+//                }
+//            }
+//            if (yColor == BLACK) {
+//                deleteFixUp(x);
+//            }
+//       }
+//
+//       void deleteFixUp(node_type_pointer x) {
+//           while (x != root && !x->isRed())
+//           {
+//               if (x->whoAmI())
+//               {
+//                   node_type_pointer  w = x->getSibling(true);
+//                   if (w->isRed())
+//                   {
+//                       w->makeMeBlack();
+//                       x->makeParentRed();
+//                       rotateLeft(x->getParent());
+//                       w = x->getSibling(true);
+//                   }
+//                   if (!w->getLeft()->isRed() && !w->getRight()->isRed())
+//                   {
+//                       w->makeMeRed();
+//                       x= x->getParent();
+//                   }else
+//                   {
+//                       if (!w->getRight()->isRed())
+//                       {
+//                           w->getLeft()->makeMeBlack();
+//                           w->makeMeRed();
+//                           rotateRight(w);
+//                           w = x->getSibling(true);
+//                       }
+//                       w->setColor(x->getParent()->getColor());
+//                       x->makeParentBlack();
+//                       w->getRight()->makeMeBlack();
+//                       rotateLeft(x->getParent());
+//                       x = root;
+//                   }
+//               }
+//               else
+//               {
+//                   node_type_pointer  w = x->getSibling(false);
+//                   if (w->isRed())
+//                   {
+//                       w->makeMeBlack();
+//                       x->makeParentRed();
+//                       rotateRight(x->getParent());
+//                       w = x->getSibling(false);
+//                   }
+//                   if (!w->getRight()->isRed() && !w->getLeft()->isRed())
+//                   {
+//                       w->makeMeRed();
+//                       x= x->getParent();
+//                   }else
+//                   {
+//                       if (!w->getLeft()->isRed())
+//                       {
+//                           w->getRight()->makeMeBlack();
+//                           w->makeMeRed();
+//                           rotateLeft(w);
+//                           w = x->getSibling(false);
+//                       }
+//                       w->setColor(x->getParent()->getColor());
+//                       x->makeParentBlack();
+//                       w->getLeft()->makeMeBlack();
+//                       rotateLeft(x->getParent());
+//                       x = root;
+//                   }
+//               }
+//           }
+//           x->makeMeBlack();
+//       }
+//
+        void deleteNode(node_optional head, const_reference val) {
+            if (!head.isPresent() || head.get()->isLeaf())
+                return;
+            if (isEqual(head.get(), val)) {
+                node_optional left = head.get()->getLeftOptional();
+                node_optional right = head.get()->getRightOptional();
+                if ((left.isPresent() && left.get()->isLeaf())
+                    || (right.isPresent() && right.get()->isLeaf())) {
+                    deleteOneChild(head.get());
+                } else {
+                    node_type_pointer inorderSuccesor = minimum(head.get()->getRight());
+                    // create other object invalidate any itertor pointing to head
+                    exchange(head.get(), inorderSuccesor);
+//                       head.get()->setValue(value2Pointer(*inorderSuccesor->getValue()));
+                    deleteNode(inorderSuccesor->getRightOptional(), *inorderSuccesor->getValue());
                 }
+            }
                 // fiha ni9ach
-                else if (isLess(head.get(), val))
-                    deleteNode(head.get()->getRightOptional(), val);
-                else
-                    deleteNode(head.get()->getLeftOptional(), val);
+            else if (isLess(head.get(), val))
+                deleteNode(head.get()->getRightOptional(), val);
+            else
+                deleteNode(head.get()->getLeftOptional(), val);
         }
+
         /*               P
          *            /   \
          *          X      R
@@ -451,214 +565,369 @@ namespace ft {
          *
          */
 
-        void fixDoubleBlackNode(node_type_pointer x)
-        {
+        void deleteOneChild(node_type_pointer x) {
             // note that we didnt delete x in this function
-            if (!x->isRed())
-            {
-                node_type_pointer  child = null;
-                node_optional left = x->getLeftOptional();
-                node_optional right = x->getRightOptional();
-                if (left.isPresent() && !left.get()->isLeaf())
-                    child = left.get();
-                else if (right.isPresent())
-                    child = right.get();
+
+            node_type_pointer child = null;
+            Color  xColor = x->getColor();
+            node_optional left = x->getLeftOptional();
+            node_optional right = x->getRightOptional();
+            if (left.isPresent() && !left.get()->isLeaf())
+                child = left.get();
+            else if (right.isPresent())
+                child = right.get();
+            child = replaceChildWithParent(x, child);
+            if (xColor == BLACK) {
                 if (!child->isLeaf() && child->isRed())
                     child->makeMeBlack();
-                else
-                {
-                    executeDoubleBlackCase(CASE_1, child, x);
+                else {
+                    executeDoubleBlackCase(CASE_1, child);
                 }
             }
 
         }
-
-        void executeDoubleBlackCase(deleteCases c,
-                                    node_type_pointer x,
-                                    node_type_pointer parent)
+        node_type_pointer replaceChildWithParent(node_type_pointer  x, node_type_pointer child)
         {
+                  child->setParent(x->getParent());
+                  if (x->isParentLeaf())
+                  {
+//                      if (child->isLeaf()) {
+//                          root = leafNode;
+//                          leafNode->setParent(null);
+//                      }
+//                      else
+                          root = child;
+                  }else
+                  {
+                      if (x->whoAmI())
+                          x->getParent()->setLeft(child);
+                      else
+                          x->getParent()->setRight(child);
+                  }
+                  destroyNode(x);
+                  return child;
+        }
+        void executeDoubleBlackCase(deleteCases c,
+                                    node_type_pointer x) {
             switch (c) {
                 case CASE_0:
                     root->makeMeBlack();
                     break;
                 case CASE_1:
-                    deleteCase1(x, parent);
+                    deleteCase1(x);
                     break;
                 case CASE_2:
-                    deleteCase2(x, parent);
+                    deleteCase2(x);
                     break;
                 case CASE_3:
-                    deleteCase3(x, parent);
+                    deleteCase3(x);
                     break;
                 case CASE_4:
-                    deleteCase4(x, parent);
+                    deleteCase4(x);
                     break;
                 case CASE_5:
-                    deleteCase5(x, parent);
+                    deleteCase5(x);
                     break;
                 case CASE_6:
-                    deleteCase6(x, parent);
+                    deleteCase6(x);
                     break;
             }
         }
-        void deleteCase1(node_type_pointer x, node_type_pointer parent)
-        {
-           if (parent->isParentLeaf()) {
-               root = x;
-             return  executeDoubleBlackCase(CASE_0, x, parent);
-           }
-            executeDoubleBlackCase(CASE_2, x, parent);
+
+        void deleteCase1(node_type_pointer x) {
+            if (x->isParentLeaf() || x->getParent() == null) {
+                root = x;
+                return executeDoubleBlackCase(CASE_0, x);
+            }
+            return  executeDoubleBlackCase(CASE_2, x);
         }
 
-        void deleteCase2(node_type_pointer x, node_type_pointer parent)
-        {
-            node_optional sibling = parent->getSiblingOptional();
-            if (sibling.isPresent() && sibling.get()->isRed())
-            {
+        void deleteCase2(node_type_pointer x) {
+            node_optional sibling = x->getSiblingOptional();
+            if (sibling.isPresent() && sibling.get()->isRed()) {
                 if (sibling.get()->whoAmI())
                     rotateRightReplacement(sibling.get(), true);
                 else
-                    rotateRightReplacement(sibling.get(), true);
+                    rotateLeftReplacment(sibling.get(), true);
+                if (sibling.get()->isParentLeaf())
+                    root = sibling.get();
             }
-            executeDoubleBlackCase(CASE_3, x, parent->getParent());
+            return  executeDoubleBlackCase(CASE_3, x);
 
         }
-        void deleteCase3(node_type_pointer x, node_type_pointer parent)
-        {
-            node_optional sibling = parent->getSiblingOptional();
-            if (sibling.isPresent())
-            {
-                if(parent->isParentBlack() &&
-                !sibling.get()->isRed() &&
-                sibling.get()->isBothChildsBlack()) {
+
+        void deleteCase3(node_type_pointer x) {
+            node_optional sibling = x->getSiblingOptional();
+            if (sibling.isPresent()) {
+                if (x->isParentBlack() &&
+                    !sibling.get()->isRed() &&
+                    sibling.get()->isBothChildsBlack()) {
                     sibling.get()->makeMeRed();
-                    executeDoubleBlackCase(CASE_1, parent->getParent(), parent->getParent());
-                }
-                else
-                    executeDoubleBlackCase(CASE_4, x, parent);
-            }
-            else
-                executeDoubleBlackCase(CASE_0, x, parent);
+                    return  executeDoubleBlackCase(CASE_1, x->getParent());
+                } else
+                    return  executeDoubleBlackCase(CASE_4, x);
+            } else
+                return  executeDoubleBlackCase(CASE_4, x);
         }
-        void deleteCase4(node_type_pointer x, node_type_pointer parent)
-        {
-            node_optional sibling = parent->getSiblingOptional();
+
+        void deleteCase4(node_type_pointer x) {
+            node_optional sibling = x->getSiblingOptional();
             if (sibling.isPresent()
-            && !sibling.get()->isRed()
-            && sibling.get()->isBothChildsBlack())
-            {
+                && !x->isParentBlack()
+                && !sibling.get()->isRed()
+                && sibling.get()->isBothChildsBlack()) {
                 sibling.get()->makeMeRed();
-                parent->makeParentBlack();
-                return executeDoubleBlackCase(CASE_0, x, parent);
-            }
-            else
-                executeDoubleBlackCase(CASE_5, x, parent);
+                x->makeParentBlack();
+                return executeDoubleBlackCase(CASE_0, x);
+            } else
+                executeDoubleBlackCase(CASE_5, x);
         }
-        void deleteCase5(node_type_pointer x, node_type_pointer parent)
-        {
-            node_optional sibling = parent->getSiblingOptional();
-            if (sibling.isPresent())
-            {
-                if (!sibling.get()->isRed() && !parent->isParentBlack())
-                {
+
+        void deleteCase5(node_type_pointer x) {
+            node_optional sibling = x->getSiblingOptional();
+            if (sibling.isPresent()) {
+                if (!sibling.get()->isRed()) {
                     node_optional sRight = sibling.get()->getRightOptional();
                     node_optional sLeft = sibling.get()->getLeftOptional();
-                    if (parent->whoAmI() && sRight.isPresent()
-                    && !sRight.get()->isRed() && sLeft.isPresent() && sLeft.get()->isRed())
+                    if (x->whoAmI() && sRight.isPresent()
+                        && !sRight.get()->isRed() && sLeft.isPresent() && sLeft.get()->isRed())
                         rotateRightReplacement(sLeft.get(), true);
-                    else if (!parent->whoAmI() && sRight.isPresent()
-                            && sRight.get()->isRed() && sLeft.isPresent() && !sLeft.get()->isRed())
+                    else if (!x->whoAmI() && sRight.isPresent()
+                             && sRight.get()->isRed() && sLeft.isPresent() && !sLeft.get()->isRed())
                         rotateLeftReplacment(sRight.get(), true);
                 }
             }
-            executeDoubleBlackCase(CASE_6, x, parent);
+            executeDoubleBlackCase(CASE_6, x);
         }
-        void deleteCase6(node_type_pointer x, node_type_pointer parent)
-        {
-            node_optional sibling = parent->getSiblingOptional();
-            x = null;
-            if (sibling.isPresent())
-            {
+
+        void deleteCase6(node_type_pointer x) {
+            node_optional sibling = x->getSiblingOptional();
+            if (sibling.isPresent()) {
                 sibling.get()->setColor(sibling.get()->getParent()->getColor());
                 sibling.get()->makeParentBlack();
-                if (parent->whoAmI())
-                {
+                if (x->whoAmI()) {
                     sibling.get()->getRight()->makeMeBlack();
                     rotateLeftReplacment(sibling.get(), false);
-                }else
-                {
+                } else {
                     sibling.get()->getLeft()->makeMeBlack();
                     rotateRightReplacement(sibling.get(), false);
                 }
-                if (sibling.get()->isParentLeaf())
-                {
+                if (sibling.get()->isParentLeaf()) {
                     root = sibling.get();
                 }
             }
-            executeDoubleBlackCase(CASE_0, x, parent);
+            executeDoubleBlackCase(CASE_0, x);
         }
-        node_type_pointer minimum(node_type_pointer n)
-        {
+
+        node_type_pointer minimum(node_type_pointer n) {
             if (n->isLeftLeaf())
                 return n;
             return minimum(n->getLeft());
         }
-        node_type_pointer successor(node_type_pointer x)
-        {
+
+        node_type_pointer successor(node_type_pointer x) {
             if (!x->isRightLeaf())
                 return minimum(x->getRight());
             else {
                 node_type_pointer y = x->getParent();
-                while (!y->isLeaf() &&  isEqual(x , y->getRight()))
-                {
-                        x = y;
-                        y = y->getParent();
+                while (!y->isLeaf() && isEqual(x, y->getRight())) {
+                    x = y;
+                    y = y->getParent();
                 }
                 return y;
             }
         }
-        bool isEqual(const_reference a, const_reference b)
+        bool checkBlackNodeCount(node_type_pointer r , int *blackCount, int count)
         {
+                if (!r->isLeaf() && !r->isRed())
+                    count++;
+                if (r->isLeftLeaf() && r->isRightLeaf())
+                {
+                    if (*blackCount == 0)
+                    {
+                        *blackCount = count;
+                        return true;
+                    }else
+                    {
+                        std::cout << "count " << count << " BlackCount " << *blackCount<<std::endl;;
+                        return count == *blackCount;
+                    }
+                }
+                return checkBlackNodeCount(r->getLeft(), blackCount, count)&&
+                        checkBlackNodeCount(r->getRight(), blackCount, count);
+        }
+        bool noRedRedParentChild(node_type_pointer  r, Color c)
+        {
+            if (r == null || r->isLeaf())
+                return true;
+            if (r->isRed() && c == RED)
+                return false;
+            return noRedRedParentChild(r->getLeft(), r->getColor())
+            && noRedRedParentChild(r->getRight(), r->getColor());
+        }
+        bool isEqual(const_reference a, const_reference b) {
             return isLess(a, b) == isLess(b, a);
         }
-        bool isEqual(node_type_pointer a, const_reference b)
-        {
+
+        bool isEqual(node_type_pointer a, const_reference b) {
             if (a->isLeaf())
                 return false;
 
             return isLess(*a->getValue(), b) == isLess(b, *a->getValue());
         }
 
-        bool isEqual(node_type_pointer x, node_type_pointer y)
-        {
+        bool isEqual(node_type_pointer x, node_type_pointer y) {
             if (y->isLeaf() || x->isLeaf())
                 return false;
             isEqual(*x->getValue(), *y->getValue());
         }
-        bool isLess(node_type_pointer a, node_type_pointer b)
-        {
+
+        bool isLess(node_type_pointer a, node_type_pointer b) {
             if (a->isLeaf() || b->isLeaf())
                 return false;
             return isLess(*a->getValue(), *b->getValue());
         }
 
-        bool isLess(node_type_pointer a, const_reference b)
-        {
+        bool isLess(node_type_pointer a, const_reference b) {
             if (a->isLeaf())
                 return false;
             return isLess(*a->getValue(), b);
         }
-        bool isLess(const_reference a, const_reference b)
-        {
+
+        bool isLess(const_reference a, const_reference b) {
             return compare(a, b);
         }
 
-        pointer value2Pointer(const_reference val)
+        /*
+         *   case 1 : lhs is parent of rhs
+         *             P
+         *            / \
+         *           X  lhs
+         *              / \
+         *             l   rhs
+            case 2: lhs is the root
+                     LEAF
+                       |
+                      lhs
+                      / \
+                     X  rhs
+                        / \
+
+             case 3 : no direct link between lhs and rhs
+                       P
+                     /  \
+                    X    lhs
+                           \
+                            Y
+                           /
+                         rhs
+         */
+        void exchange(node_type_pointer lhs, node_type_pointer rhs) {
+            // copy the value of rhs to lhs
+            destroyData(lhs->getValue());
+            lhs->setValue(value2Pointer(*rhs->getValue()));
+            if (lhs->isMyLeftChild(rhs))
+            {
+                swapLeftChild(lhs, rhs);
+            }else if (lhs->isMyRightChild(rhs))
+            {
+                swapRightChild(lhs, rhs);
+            }else
+            {
+                swapNodes(lhs, rhs);
+            }
+           Color rhsColor = rhs->getColor();
+            rhs->setColor(lhs->getColor());
+            lhs->setColor(rhsColor);
+
+        }
+        void swapNodes(node_type_pointer u, node_type_pointer v)
         {
+            node_optional uParent = u->getParentOptional();
+            node_optional  vParent = v->getParentOptional();
+            node_optional uL = u->getLeftOptional();
+            node_optional uR = u->getRightOptional();
+            bool isULeft = u->whoAmI();
+            node_optional vL = v->getLeftOptional();
+            node_optional vR = v->getRightOptional();
+            bool isVLeft = v->whoAmI();
+            // swap Parents
+            v->setParent(uParent.get());
+            u->setParent(vParent.get());
+            if (vParent.isPresent() && !vParent.get()->isLeaf())
+            {
+                if (isVLeft)
+                    vParent.get()->setLeft(u);
+                else
+                    vParent.get()->setRight(u);
+            }
+            if (uParent.isPresent() && !uParent.get()->isLeaf())
+            {
+                if (isULeft)
+                    uParent.get()->setLeft(v);
+                else
+                    uParent.get()->setRight(v);
+            }
+            // swapChilds
+                v->setLeft(uL.get());
+                v->setRight(uR.get());
+                u->setLeft(vL.get());
+                u->setRight(vR.get());
+                u->makeMeTheParentOfMyChilds();
+                v->makeMeTheParentOfMyChilds();
+                //v->setColor(u->getColor());
+        }
+        void swapLeftChild(node_type_pointer x, node_type_pointer child)
+        {
+            node_optional parent = x->getParentOptional();
+            bool iAm = x->whoAmI();
+            node_optional right = x->getRightOptional();
+            node_optional childLeftChild = child->getLeftOptional();
+            if (parent.isPresent() && !parent.get()->isLeaf())
+            {
+                if(iAm)
+                    parent.get()->setLeft(child);
+                else
+                    parent.get()->setRight(child);
+            }
+            child->setParent(parent.get());
+            x->setRight(child->getRight());
+            child->setLeft(x);
+            child->setRight(right.get());
+            x->setLeft(childLeftChild.get());
+            child->makeMeTheParentOfMyChilds();
+            x->makeMeTheParentOfMyChilds();
+            //child->setColor(x->getColor());
+
+        }
+        void swapRightChild(node_type_pointer x, node_type_pointer child)
+        {
+            node_optional parent = x->getParentOptional();
+            bool iAm = x->whoAmI();
+            node_optional left = x->getLeftOptional();
+            node_optional childRightChild = child->getRightOptional();
+            if (parent.isPresent() && !parent.get()->isLeaf())
+            {
+                if(iAm)
+                    parent.get()->setLeft(child);
+                else
+                    parent.get()->setRight(child);
+            }
+            child->setParent(parent.get());
+            x->setLeft(child->getLeft());
+            child->setRight(x);
+            child->setLeft(left.get());
+            x->setRight(childRightChild.get());
+            child->makeMeTheParentOfMyChilds();
+            x->makeMeTheParentOfMyChilds();
+        }
+
+        pointer value2Pointer(const_reference val) {
             pointer value = _alloc.allocate(1);
             _alloc.construct(value, val);
             return value;
         }
+
         node_type_pointer createNode(const_reference val,
                                      node_type_pointer left = null,
                                      node_type_pointer right = null,
@@ -674,11 +943,10 @@ namespace ft {
             _value_node_alloc.construct(c, value_node_type(value2Pointer(val), left, right, parent));
             return c;
         }
+
         node_optional cloneNodeAndReplaceData(node_type_pointer x,
-                        const_reference  v)
-        {
-            if (!x->isLeaf())
-            {
+                                              const_reference v) {
+            if (!x->isLeaf()) {
                 node_type_pointer newNode = createNode(v,
                                                        x->getLeft(),
                                                        x->getRight(),
@@ -691,8 +959,7 @@ namespace ft {
                 if (right.isPresent())
                     right.get()->setParent(newNode);
                 node_optional p = x->getParentOptional();
-                if (p.isPresent() && !p.get()->isLeaf())
-                {
+                if (p.isPresent() && !p.get()->isLeaf()) {
                     if (x->whoAmI())
                         p.get()->setLeft(newNode);
                     else
@@ -703,28 +970,26 @@ namespace ft {
             }
             return node_optional::empty();
         }
-        void cloneData(node_type_pointer c, const_pointer val)
-        {
+
+        void cloneData(node_type_pointer c, const_pointer val) {
             destroyData(c->getValue());
             c->setValue(value2Pointer(val));
         }
-        void destroyData(pointer data)
-        {
 
-                _alloc.destroy(data);
-                _alloc.deallocate(data , 1);
+        void destroyData(pointer data) {
+
+            _alloc.destroy(data);
+            _alloc.deallocate(data, 1);
         }
-        void destroyNode(node_type_pointer node)
-        {
+
+        void destroyNode(node_type_pointer node) {
             if (!node->isLeaf()) {
                 destroyData(node->getValue());
-                _value_node_alloc.destroy((value_node_pointer)node);
-                _value_node_alloc.deallocate((value_node_pointer)node, 1);
-            }
-            else
-            {
-                _leaf_node_alloc.destroy((leaf_node_pointer )node);
-                _leaf_node_alloc.deallocate((leaf_node_pointer)node, 1);
+                _value_node_alloc.destroy((value_node_pointer) node);
+                _value_node_alloc.deallocate((value_node_pointer) node, 1);
+            } else {
+                _leaf_node_alloc.destroy((leaf_node_pointer) node);
+                _leaf_node_alloc.deallocate((leaf_node_pointer) node, 1);
             }
         }
 

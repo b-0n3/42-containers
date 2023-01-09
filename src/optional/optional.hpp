@@ -11,7 +11,9 @@ namespace  ft {
           T data;
           Optional(): data(null){}
           Optional(T   data): data(data){}
+
         public :
+        Optional(const Optional<T> &other) {this->data = other.data;}
             bool isPresent(){
                 return data != null;
             }
