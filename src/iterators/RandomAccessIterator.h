@@ -32,7 +32,7 @@ namespace ft {
             return RandomAccessIterator<const T>(_ptr);
         }
 
-        RandomAccessIterator &operator=( RandomAccessIterator const   &rhs)
+        RandomAccessIterator &operator=(RandomAccessIterator const   &rhs)
         {
             if (this != &rhs)
                 _ptr = rhs._ptr;

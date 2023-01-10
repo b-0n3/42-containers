@@ -16,8 +16,15 @@
 namespace ft {
     struct Trunk {
         Trunk *prev;
+        Trunk *next;
         std::string str;
-        Trunk( Trunk *prev, std::string str ) { this->prev = prev; this->str = str; }
+        Trunk( Trunk *prev, std::string str ) {
+            this->prev = prev;
+            this->str = str;
+            next = null;
+            if (prev!= null)
+                prev->next = this;
+        }
     };
     void showTrunks(Trunk *p) {
         if (p == nullptr) {
@@ -28,38 +35,63 @@ namespace ft {
         showTrunks(p->prev);
         std::cout << p->str;
     }
-    template<class T>
+    template<class T, typename ref>
     class Node {
     public:
         typedef T value_type;
-        typedef ft::Node<T> node_t;
-        typedef ft::Node<T> *node_pointer;
-        typedef ft::Node<T> &node_reference;
+        typedef ft::Node<T, ref> node_t;
+        typedef ft::Node<T, ref> *node_pointer;
+        typedef const ft::Node<T, ref> *const_node_pointer;
+        typedef ft::Node<T, ref> &node_reference;
         typedef ft::Optional<node_pointer> node_optional;
+        typedef ft::Optional<const_node_pointer> const_node_optional;
         typedef ft::Optional<bool *> bool_optional;
+    protected:
+        Node(value_type const value,node_pointer left, node_pointer right, node_pointer parent):
+                value(value),
+                parent(parent),
+                left(left),
+                right(right),
+                color(RED),
+                lastGVisited(node_optional::empty()),
+                lastLessVisted(node_optional::empty())
+        {}
+        value_type value;
+        node_pointer parent;
+        node_pointer left;
+        node_pointer right;
+        Color color;
+        node_optional lastGVisited;
+        node_optional lastLessVisted;
 
+
+    public:
         Node() :
                 value(null),
                 parent(null),
                 left(null),
                 right(null),
-                color(BLACK) {
+                color(BLACK),
+                lastGVisited(node_optional::empty()),
+                lastLessVisted(node_optional::empty()){
         }
 
-        virtual node_type getType() = 0;
+        virtual node_type getType() const = 0 ;
 
         virtual ~Node() {}
 
-        Node(ft::Node<T> const &rhs) :
+        Node(ft::Node<T, ref> const &rhs) :
                 value(rhs.value),
                 parent(rhs.parent),
                 left(rhs.left),
                 right(rhs.right),
-                color(rhs.color) {}
+                color(rhs.color) ,
+                lastGVisited(node_optional::empty()),
+                lastLessVisted(node_optional::empty()){}
 
         virtual size_t getHeight() = 0;
 
-        ft::Node<T> &operator=(ft::Node<T> const &rhs) {
+        ft::Node<T, ref> &operator=(ft::Node<T, ref> const &rhs) {
             if (this == &rhs)
                 return *this;
             value = rhs.value;
@@ -69,6 +101,140 @@ namespace ft {
             color = rhs.color;
             return *this;
         }
+
+        void clearLastVistedNodesPointer()
+        {
+            this->lastGVisited = node_optional::empty();
+            this->lastLessVisted = node_optional::empty();
+        }
+
+
+        void setLastLessVisted(node_optional lastL)
+        {
+            this->lastLessVisted = lastL;
+        }
+        node_optional getLastLessVisited() {
+           return lastLessVisted;
+        }
+
+
+        void setLastGreatVisted(node_optional lastG)
+        {
+            this->lastGVisited = lastG;
+        }
+
+        node_optional getLastGreatVisted()
+        {
+            return lastGVisited;
+        }
+
+        ref &operator*() const {
+            return *this->getValue();
+        }
+
+        ref operator->() const{
+            return *this->getValue();
+        }
+
+        node_t &operator++()
+        {
+            node_optional x = successor();
+            if (x.isPresent())
+            {
+                this->clearLastVistedNodesPointer();
+                x.get()->setLastLessVisted(node_optional::of(this));
+                return *x.get();
+            }
+            throw std::out_of_range("out of range");
+        }
+
+        node_t &operator--()
+        {
+            node_optional x = predecessor();
+            if (x.isPresent())
+            {
+                this->clearLastVistedNodesPointer();
+                x.get()->setLastGreatVisted(node_optional::of(this));
+                return *x.get();
+            }
+            throw std::out_of_range("out of range");
+        }
+        Node &operator++(int)
+        {
+            node_optional x = successor();
+            if (x.isPresent())
+            {
+                this->clearLastVistedNodesPointer();
+                x.get()->setLastLessVisted(node_optional::of(this));
+                return *x.get();
+            }
+            throw std::out_of_range("out of range");
+        }
+
+        node_t &operator--(int)
+        {
+            node_optional x = predecessor();
+            if (x.isPresent())
+            {
+                x.get()->clearLastVistedNodesPointer();
+                x.get()->setLastGreatVisted(node_optional::of(this));
+                return *x.get();
+            }
+            throw std::out_of_range("out of range");
+        }
+        // min and max
+        node_optional minimum() {
+            if (isLeftLeaf())
+                return node_optional::of(this);
+            node_pointer n = getLeft();
+            while (!n->isLeftLeaf())
+              n  = n->getLeft();
+            return node_optional::ofNullable(n);
+        }
+
+        node_optional maximum()
+        {
+            if (isRightLeaf())
+                return  node_optional::of(this);
+            node_pointer n = getRight();
+            while (!n->isRightLeaf())
+                n = n->getRight();
+            return node_optional::ofNullable(n);
+        }
+
+        node_optional successor()
+        {
+            if (isLeaf())
+                return getLastLessVisited();
+            if(!isRightLeaf())
+                return getRight()->minimum();
+             node_pointer  y = getParent();
+              node_pointer   x = this;
+            while (!y->isLeaf() && x == y->getRight())
+            {
+                x = y;
+                y = y->getParent();
+            }
+            return node_optional::ofNullable(y);
+        }
+
+
+        node_optional  predecessor()
+        {
+            if (isLeaf())
+                return getLastGreatVisted();
+            if (!isLeftLeaf())
+                return getLeft()->maximum();
+            node_pointer y = getParent();
+            node_pointer x = this;
+            while (!y->isLeaf() && x == y->getLeft())
+            {
+                x = y;
+                y = y->getParent();
+            }
+            return node_optional::ofNullable(y);
+        }
+
         node_optional getSiblingOptional()
         {
 //            if (getType() == LEAF)
@@ -83,10 +249,12 @@ namespace ft {
             return node_optional::empty();
         }
 
+
         node_optional  getParentOptional()
         {
              return node_optional::ofNullable(parent);
         }
+
         node_optional getLeftOptional()
         {
             if (getType() == LEAF)
@@ -100,21 +268,21 @@ namespace ft {
                 return node_optional::empty();
             return node_optional::ofNullable(right);
         }
-        bool isMyRightChild(node_pointer other)
+        bool isMyRightChild(node_pointer other)const
         {
             if (other == null)
                 return false;
             node_optional  r = getRightOptional();
             return r.isPresent() && r.get() == other;
         }
-        bool isMyLeftChild(node_pointer other)
+        bool isMyLeftChild(node_pointer other)const
         {
             if (other == null)
                 return false;
             node_optional  l = getLeftOptional();
             return l.isPresent() && l.get() == other;
         }
-        bool isBothChildsBlack()
+        bool isBothChildsBlack()const
         {
             node_optional l = getLeftOptional();
             node_optional r = getRightOptional();
@@ -123,11 +291,11 @@ namespace ft {
         }
 
 
-        bool isParentBlack()
+        bool isParentBlack()const
         {
             return !getParent()->isRed();
         }
-        bool isRed(){
+        bool isRed()const{
             return color == RED;
         }
         void makeMeBlack()
@@ -138,15 +306,15 @@ namespace ft {
         {
             setColor(RED);
         }
-        void makeParentBlack()
+        void makeParentBlack()const
         {
             getParent()->makeMeBlack();
         }
-        void makeParentRed()
+        void makeParentRed()const
         {
             getParent()->makeMeRed();
         }
-        void makeMeTheParentOfMyChilds()
+        void makeMeTheParentOfMyChilds()const
         {
              if (!isLeftLeaf())
                  left->setParent(this);
@@ -154,11 +322,11 @@ namespace ft {
                  right->setParent(this);
         }
 
-        node_pointer getGrandParent()
+        node_pointer getGrandParent()const
         {
             return this->getParent()->getParent();
         }
-        bool isLeaf()
+        bool isLeaf()const
         {
             return getType() == LEAF;
         }
@@ -179,7 +347,7 @@ namespace ft {
         }
 
 
-        bool isParentLeaf()
+        bool isParentLeaf()const
         {
             return getParent() == null || getParent()->isLeaf();
         }
@@ -187,7 +355,7 @@ namespace ft {
         {
             value = v;
         }
-        value_type getValue(){
+        value_type getValue()const{
             return value;
         }
         node_pointer getLeft() const{
@@ -225,35 +393,24 @@ namespace ft {
             }
             return false;
         }
+
 //        virtual void  print(logArray &list, size_t level, int maxWidth) = 0;
         virtual  void  print(Trunk *prev) = 0;
 
-    protected:
-        Node(value_type const value,node_pointer left, node_pointer right, node_pointer parent):
-        value(value),
-        parent(parent),
-        left(left),
-        right(right),
-        color(RED)
-        {}
-        value_type value;
-        node_pointer parent;
-        node_pointer left;
-        node_pointer right;
-        Color color;
 
 
 
 
     };
 
-    template<class T>
-    class LeafNode : public ft::Node<T> {
+    template<class T, typename  ref>
+    class LeafNode : public ft::Node<T , ref> {
     public:
-         node_type getType() {return LEAF;}
+         node_type getType() const {return LEAF;}
 
          ~LeafNode(){}
-         LeafNode(): Node<T>(){}
+         LeafNode(): Node<T, ref>(){}
+
         void print(Trunk *prev)
         {
             std::string prev_str = "    ";
@@ -266,16 +423,17 @@ namespace ft {
             }
             showTrunks(trunk);
             std::cout <<"(LEAF)" << std::endl;
+            delete trunk;
         }
-         size_t  getHeight() {return 0;}
+         size_t  getHeight() {return 1;}
     };
 
-    template<class T>
-    class ValueNode : public ft::Node<T> {
+    template<class T, typename ref>
+    class ValueNode : public ft::Node<T, ref> {
     public:
-        typedef  typename ft::Node<T>::value_type value_type;
-        typedef typename ft::Node<T>::node_pointer  node_pointer;
-        node_type getType() { return REGULAR;}
+        typedef  typename ft::Node<T, ref>::value_type value_type;
+        typedef typename ft::Node<T, ref>::node_pointer  node_pointer;
+        node_type getType() const { return REGULAR;}
         ~ValueNode(){}
 
 //        explicit ValueNode(value_type const &value):
@@ -285,10 +443,10 @@ namespace ft {
        explicit ValueNode(value_type const   &value, node_pointer left,
                   node_pointer right, node_pointer parent)
         :
-        Node<T>(value, left, right, parent)
+        Node<T, ref>(value, left, right, parent)
         {}
-        ValueNode(ft::ValueNode<T> const &rhs):
-          ft::Node<T>(rhs)
+        ValueNode(ft::ValueNode<T, ref> const &rhs):
+          ft::Node<T, ref>(rhs)
         {
         }
 
@@ -340,10 +498,14 @@ namespace ft {
               }
               trunk->str = "   |";
               this->getLeft()->print(trunk);
+              delete trunk;
           }
 
         size_t  getHeight() {
-            return 1 +  std::max(this->getRight()->getHeight(), this->getLeft()->getHeight());
+            int value = 0;
+             if (this->getColor() == BLACK)
+                 value = 1;
+              return value +  std::max(this->getRight()->getHeight(), this->getLeft()->getHeight());
         }
     };
 

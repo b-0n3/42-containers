@@ -51,6 +51,12 @@ namespace  ft{
 enum deleteCases{
     CASE_0,
     CASE_1,
+    /*
+     *  @OPTION : CASE_2
+     *            sibling is Red and and sibling's children are black
+     *             Do the following:
+     *             - rotate the sibling node and go check other cases
+    */
     CASE_2,
     CASE_3,
     CASE_4,

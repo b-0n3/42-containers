@@ -1,6 +1,6 @@
 COMPILER = clang++
 DEBUG_RB_TREE= -DDEBUG_RED_BLACK_TREE
-FLAGS_DEBUG = --std=c++98 -Wall -Wextra -Werror -g -fsanitize=address $(DEBUG_RB_TREE)
+FLAGS_DEBUG = --std=c++98 -Wall -Wextra -Werror -g #-fsanitize=address $(DEBUG_RB_TREE)
 FLAGS = --std=c++98 -Wall -Wextra -Werror
 
 VECTOR=vector

@@ -14,7 +14,7 @@ namespace  ft {
 
         public :
         Optional(const Optional<T> &other) {this->data = other.data;}
-            bool isPresent(){
+            bool isPresent() const{
                 return data != null;
             }
             /*
@@ -23,7 +23,7 @@ namespace  ft {
              *    if  you pass in a null value  expect a segmentation fault
              *     use ofNullable
              */
-            static  Optional<T> of(T item)
+            static  Optional<T> of(T const &item)
             {
                 return Optional<T>(item);
             }
@@ -39,10 +39,14 @@ namespace  ft {
             {
                return item == null ? empty(): of (item);
             }
-            T get()
+            T get() const
             {
               return data;
             }
+             T get()
+             {
+                 return data;
+             }
             template< class V>
             Optional<V> ifPresentReturn(V other)
             {
@@ -52,10 +56,10 @@ namespace  ft {
             {
               return isPresent() ? *this : Optional<T>::ofNullable(other);
             }
-            Optional<T> orElseThrow(std::exception &e)
+             T &orElseThrow(std::exception const &e)
             {
                 if (isPresent())
-                    return *this;
+                    return data;
                 throw  e;
             }
     };
