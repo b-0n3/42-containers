@@ -3,8 +3,9 @@
 //
 
 #pragma  once
-
-typedef  enum{
-    REGULAR,
-    LEAF
-} node_type;
+namespace ft {
+    typedef enum {
+        REGULAR,
+        LEAF
+    } node_type;
+}

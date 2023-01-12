@@ -31,9 +31,7 @@ public:
     {
         _current = rev_it.base();
     }
-//    template <class _Iter>
-//    reverse_iterator& operator=(const reverse_iterator<_Iter>& _u)
-//    { _current   = _u.base(); return *this; }
+
 
     Iter base() const {
         return _current;

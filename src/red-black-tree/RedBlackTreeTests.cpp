@@ -771,7 +771,7 @@ int main() {
                 998534, 998639, 998727, 998816, 998827,
                 998977, 999011, 999044, 999052, 999286, 999447, 999450, 999524, 999563, 999745, 999949
         };
-        ft::RedBlackTree<int, ft::_less<int> > rbl;
+        ft::RedBlackTree<int, std::less<int> > rbl;
         bool insertionValid = true;
         std::cout << "test insertion" << std::endl;
         for (int i = 0; i < size; i++) {
@@ -786,22 +786,11 @@ int main() {
         std::cout << "h " << rbl.getHeight() << std::endl;
         std::cout << "is insertion valid ? " << insertionValid << std::endl;
         rbl.log("", true);
-//    rbl.log("", true);
-//    bool searchValid = true;
-//    std::cout << "test search" << std::endl;
-//    for (int i = 0; i < size ;i++) {
-//        ft::Node<int *,int>  *s = rbl.search(keys[i]);
-//        if (s == null || s->isLeaf())
-//        {
-//            std::cout << "case " << i << " number " << keys[i]   << std::endl;
-//            searchValid = false;
-//            break;
-//        }
-//    }
+
         std::cout << "test iterator" << std::endl;
 
-        ft::RedBlackTree<int, ft::_less<int> >::const_iterator it = rbl.begin();
-        ft::RedBlackTree<int, ft::_less<int> >::const_iterator end = rbl.end();
+        ft::RedBlackTree<int, std::less<int> >::const_iterator it = rbl.begin();
+        ft::RedBlackTree<int, std::less<int> >::const_iterator end = rbl.end();
         std::cout << "min " << *it << std::endl;
         while (it != end) {
             std::cout << "number " << *it << std::endl;
@@ -809,77 +798,4 @@ int main() {
         }
 
 }
-//    std::cout << "it " << **it << std::endl;
-//    std::cout << "is search  valid ? " << searchValid << std::endl;
-//    bool deletionValid = true;
-//    std::cout << "test deletion" << std::endl;
-//    for (int i = 0; i < size ;i++) {
-//        rbl.erase(keys[i]);
-//        if (!rbl.validateTree())
-//        {
-//            std::cout << "case " << i << " number " << keys[i] << std::endl;
-//            deletionValid = false;
-//        break;
-//        }
-//    }
-//
-//    std::cout << "is deletion valid ? " << deletionValid << std::endl;
-//    std::cout << "test insertion" << std::endl;
-//    searchValid = true;
-//    for (int i = 0; i < size ;i++) {
-//        ft::Node<int *, int >  *s = rbl.search(keys[i]);
-//        if (s != null && !s->isLeaf())
-//        {
-//            std::cout << "case " << i << " number " << keys[i] << std::endl;
-//            searchValid = false;
-//            break;
-//        }
-//    }
-//    std::cout << "is search  valid ? " << searchValid << std::endl;
-
-
-
-//    printHeader();
-//    std::string v;
-//    std::string input;
-//    std::cin >> input;
-//
-//    while(1) {
-//
-//        if (input == "e")
-//            break;
-//        if (input == "i")
-//        {
-//            std::cin >> v;
-//
-//            rbl.insert(std::atoi(v.c_str()));
-//        }
-//        if (input == "d")
-//        {
-//            std::cin >> v;
-//            rbl.erase(std::atoi(v.c_str()));
-//        }
-//        printHeader();
-//        std::cin >> input;
-//    }
-//    std::cout << "insertion" << std::endl;
-//    for (int i =0; i< size ;i ++ )
-//    {
-//        rbl.insert(keys[i]);
-//        std::cout << "INSERT " << keys[i];
-//    }
-//    std::cout << "Debug " << __LINE__ << " " << __PRETTY_FUNCTION__  << " " << __FILE__ << std::endl;
-//    ft::Node<int *> *va = null;
-//    int founds = 0;
-//    for (int i =0; i< size ;i ++ ) {
-//       va  = rbl.search(keys[i]);
-//        if (va != null && va->getType() != LEAF)
-//
-//            std::cout << std::endl << "found    " << ++founds << *va->getValue() << std::endl;
-//        else
-//            std::cout << std::endl << "not found" << va << std::endl;
-//    }
-//
-//    std::cout << "found " << founds << "out of " << size<< std::endl;
-   // std::cout << rbl.getHeight() << std::endl;
 }

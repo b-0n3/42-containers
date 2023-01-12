@@ -42,7 +42,7 @@ namespace ft {
     private:
         _rb_tree_type redBlackTree;
     public:
-        set(const key_compare& comp = key_compare(),
+        explicit  set(const key_compare& comp = key_compare(),
             const allocator_type& alloc = allocator_type())
                 : redBlackTree(_rb_tree_type(alloc, comp))
         {
@@ -136,7 +136,7 @@ namespace ft {
         {
             return  iterator(redBlackTree.upper_bound(k));
         }
-        ft::pair<iterator, iterator>   equal_range (const key_type& k) const
+        ft::pair<iterator, iterator>   equal_range(const key_type& k) const
         {
             return  ft::make_pair(lower_bound(k), upper_bound(k));
         }
@@ -158,10 +158,7 @@ namespace ft {
         {
             return redBlackTree.size();
         }
-        size_type size()
-        {
-            return redBlackTree.size();
-        }
+
 
 
         iterator begin()

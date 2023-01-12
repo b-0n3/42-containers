@@ -167,7 +167,7 @@ namespace  ft {
         void insert(iterator position, size_type n, const value_type &val)
         {
              size_type index = position - begin();
-//             size_type n_copy = n;
+
              if (index > _size)
                   index = _size;
                 if (size() + n <= size() * 2)

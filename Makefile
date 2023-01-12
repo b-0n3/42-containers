@@ -1,7 +1,7 @@
 COMPILER = c++
 DEBUG_RB_TREE= -DDEBUG_RED_BLACK_TREE
 FLAGS_DEBUG = --std=c++98 -Wall -Wextra -Werror -g  -fsanitize=address $(DEBUG_RB_TREE)
-FLAGS = --std=c++98 -Wall -Wextra -Werror -g
+FLAGS = --std=c++98 -Wall -Wextra -Werror 
 
 VECTOR=vector
 MAP=map
@@ -27,6 +27,9 @@ $(SET):
 
 re: fclean all
 
+clean:
+	echo "cleaning "
+
 bonus: $(SET)
 
 cleanStack:
@@ -39,4 +42,6 @@ cleanMap:
 cleanSet:
 	rm -rf $(SET)
 
-fclean:	cleanMap cleanSet cleanStack cleanVector
+fcleanBonus: cleanSet
+
+fclean:	cleanMap  cleanStack cleanVector
