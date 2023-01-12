@@ -11,32 +11,34 @@
 #include <iterator>
 namespace ft {
 
-    template<class T, typename  V>
+    template<class T, typename  V, typename constValue>
     class BidirectionalIterator :
             public ft::Iterator<std::bidirectional_iterator_tag,
-                    T>{
-    private:
-        T *_ptr;
-    public:
-        typedef typename ft::Iterator<std::random_access_iterator_tag, T>::iterator_category  iterator_category;
-        typedef typename ft::Iterator<std::random_access_iterator_tag, T>::value_type  value_type;
-        typedef typename ft::Iterator<std::random_access_iterator_tag, T>::difference_type difference_type;
-        typedef typename ft::Iterator<std::random_access_iterator_tag, T>::pointer pointer;
-        typedef typename ft::Iterator<std::random_access_iterator_tag, T>::reference reference;
-        typedef  V &value_type_reference;
-        typedef  V *value_type_pointer;
+                    V>{
 
+    public:
+        typedef typename ft::Iterator<std::bidirectional_iterator_tag, V>::iterator_category  iterator_category;
+        typedef typename ft::Iterator<std::bidirectional_iterator_tag, V>::value_type  value_type;
+        typedef typename ft::Iterator<std::bidirectional_iterator_tag, V>::difference_type difference_type;
+        typedef  constValue * pointer;
+        typedef  constValue &reference;
+        typedef   T * node_pointer;
+    private:
+        node_pointer _ptr;
+    public:
 
         BidirectionalIterator() : _ptr(nullptr) {}
-        BidirectionalIterator(const pointer   ptr) : _ptr(ptr) {}
+        BidirectionalIterator(const node_pointer   ptr) : _ptr(ptr) {}
 
-        BidirectionalIterator(BidirectionalIterator  const   &rhs)  {
+        BidirectionalIterator(BidirectionalIterator  const   &rhs) {
             _ptr = rhs._ptr;
         }
-
-        operator BidirectionalIterator< T, const V> () const{
-            return BidirectionalIterator< T, const  V>(_ptr);
+        operator BidirectionalIterator< T,  V, const V> ()  const {
+            return BidirectionalIterator<T,  V, const V> (_ptr);
         }
+//        operator BidirectionalIterator<T , const V> () {
+//            return BidirectionalIterator<T, const V>(_ptr);
+//        }
 
         BidirectionalIterator &operator=( BidirectionalIterator const   &rhs)
         {
@@ -55,10 +57,10 @@ namespace ft {
             return _ptr != other._ptr;
         }
 
-        value_type_pointer operator->() const {
-            return *_ptr;
+        pointer operator->() const {
+            return _ptr->operator->();
         }
-        value_type_reference operator*() const {
+        reference operator*() const {
             return **_ptr;
         }
 
@@ -67,7 +69,7 @@ namespace ft {
             return *this;
         }
         const BidirectionalIterator operator++(int)      {
-            pointer tmp = _ptr;
+            node_pointer tmp = _ptr;
             _ptr = &((*_ptr)++);
             return BidirectionalIterator(tmp);
         }
@@ -76,19 +78,19 @@ namespace ft {
             return *this;
         }
         const BidirectionalIterator operator--(int)     {
-            pointer tmp = _ptr;
+            node_pointer tmp = _ptr;
             _ptr = &((*_ptr)--);
             return BidirectionalIterator(tmp);
         }
 
     };
 
-    template<class T, typename V>
-    bool operator==(const T *ptr, const BidirectionalIterator<T, V> &other) {
+    template<class T, typename V,typename constValue>
+    bool operator==(const T *ptr, const BidirectionalIterator<T, V,constValue> &other) {
         return ptr == other._ptr;
     }
-    template<class T, typename V>
-    bool operator!=(const T *ptr, const BidirectionalIterator<T, V> &other) {
+    template<class T, typename V,typename constValue>
+    bool operator!=(const T *ptr, const BidirectionalIterator<T, V,constValue> &other) {
         return ptr != other._ptr;
     }
 };

@@ -5,7 +5,7 @@
 #pragma once
 
 
-#include <algorithm>
+//#include <algorithm>
 #include <memory>
 #include <unistd.h>
 #include <string>
@@ -18,23 +18,6 @@
 #include "../iterators/bidirectional_iterator.hpp"
 
 namespace ft {
-    template<class T>
-    struct _less {
-        bool operator()(T o, T other) {
-            return o < other;
-        }
-    };
-
-    /*
-     *  @TODO: create documentation of insertCases
-     */
-    enum insertCases {
-        LL,
-        LR,
-        RL,
-        RR
-    };
-
     template<class T,
             class Compare = std::less<T>,
             class Alloc = std::allocator<T>
@@ -58,10 +41,10 @@ namespace ft {
         typedef node_type *node_type_pointer;
         typedef ft::Optional<deleteCases> deleteCasesOptional;
         typedef ft::Optional<node_type_pointer> node_optional;
-        typedef ft::BidirectionalIterator<node_type,  value_type> iterator;
-        typedef ft::BidirectionalIterator< node_type, const value_type> const_iterator;
+        typedef ft::BidirectionalIterator<node_type,  value_type, value_type> iterator;
+        typedef ft::BidirectionalIterator<node_type ,  value_type, const value_type> const_iterator;
         typedef ft::pair<iterator, bool> creationPair;
-        typedef ft::RedBlackTree<T, Compare , Alloc> ___self;
+        typedef ft::RedBlackTree<T, Compare , Alloc> _self;
     private:
         allocator_type _alloc;
         value_node_alloc _value_node_alloc;
@@ -71,6 +54,11 @@ namespace ft {
         compare_type compare;
         node_type_pointer current;
         size_t _size;
+        node_type_pointer _firstNode;
+        node_type_pointer _lastNode;
+        node_type_pointer  lastDeletedNode;
+//        iterator _beginNodeIterator;
+//        iterator _leafNodeIterator;
         typedef std::out_of_range out_of_range_execption;
     public:
         explicit RedBlackTree(const allocator_type _alloc = allocator_type(),
@@ -83,7 +71,10 @@ namespace ft {
             leafNode(createLeafNode()),
             root(leafNode),
             compare(compare),
-            _size(0) {
+            _size(0),
+            _firstNode(root),
+            _lastNode(root),
+            lastDeletedNode(null){
         }
 
         RedBlackTree(const_reference val,
@@ -97,32 +88,57 @@ namespace ft {
                 leafNode(createLeafNode()),
                 root(leafNode),
                 compare(compare),
-                _size(0) {
+                _size(0),
+
+                _firstNode(root),
+                _lastNode(root),
+                lastDeletedNode(null){
 
             insert(val);
         }
-        RedBlackTree(___self const &x):
-                _alloc(x._alloc),
+        RedBlackTree(_self const &x)
+        :       _alloc(x._alloc),
                 _value_node_alloc(x._value_node_alloc),
                 _leaf_node_alloc(x._leaf_node_alloc),
-                leafNode(x.leafNode),
-                root(x.root),
+                leafNode(createLeafNode()),
+                root(leafNode),
                 compare(x.compare),
-                _size(x._size)
+                _size(0),
+                _firstNode(root),
+                _lastNode(root),
+                lastDeletedNode(null)
         {
+            const_iterator start = x.cbegin();
+            const_iterator end = x.cend();
+            while (start != end)
+            {
+                insert(*start);
+                start++;
+            }
         }
-        RedBlackTree  &operator=(___self const &rhs)
+        RedBlackTree  &operator=(_self const &rhs)
         {
-            if (*this != rhs)
+            if (this != &rhs)
             {
                 _alloc = rhs._alloc;
                 _value_node_alloc = rhs._value_node_alloc;
                 _leaf_node_alloc = rhs._leaf_node_alloc;
-                leafNode = rhs.leafNode;
-                root =rhs. root;
+
+                if (!root->isLeaf())
+                    clearAll(root);
+                destroyNode(leafNode);
                 compare = rhs.compare;
-                current = rhs.current;
-                _size = rhs._size;
+                leafNode = createLeafNode();
+                root = leafNode;
+                _firstNode = root;
+                _lastNode = root;
+                const_iterator start = rhs.cbegin();
+                const_iterator end = rhs.cend();
+                while (start != end)
+                {
+                    insert(*start);
+                    start++;
+                }
             }
             return *this;
         }
@@ -148,7 +164,7 @@ namespace ft {
             std::cout << header << std::endl;
 
             this->root->print(null);
-            std::cout << std::endl;;
+            std::cout << std::endl;
             logInorderTraversal(root);
             std::cout << std::endl;
         }
@@ -156,54 +172,124 @@ namespace ft {
          * @Return: an iterator pointing to the first element in the container
          * whose key is not considered to go before k (i.e., either it is equivalent or goes after).
          */
-        node_type_pointer lower_bound(const_reference val) {
-            node_type_pointer x = root;
-            const_reference lesser = val;
-
-            while(!x->isLeaf())
-            {
-                if (isEqual(x, val))
-                 return x;
-                if (isLess(x ,lesser))
-                {
-                    lesser = *x;
-                    x = x->getRight();
-                }else
-                    x = x->getLeft();
+        iterator lower_bound(const_reference val)  {
+            node_type_pointer x = search(root, val);
+            if (!x->isLeaf())
+                return iterator(x);
+            iterator b = begin();
+            while (b != end()) {
+                if (!isLess(*b, val))
+                    break;
+                b++;
             }
-            return x;
+            return b;
+        }
+        /*
+       * @Return: an iterator pointing to the first element in the container
+       * whose key is not considered to go before k (i.e., either it is equivalent or goes after).
+       */
+        const_iterator lower_bound(const_reference val) const {
+            node_type_pointer x = search(root, val);
+            if (!x->isLeaf())
+                return const_iterator(x);
+            const_iterator b = cbegin();
+            while (b != cend()) {
+                if (!isLess(*b, val))
+                    break;
+                b++;
+            }
+            return b;
         }
         /*
          * @Return: an iterator pointing to the first element in
          * the container whose key is considered to go after k.
          */
-        node_type_pointer upper_bound(const_reference val)
+        iterator upper_bound(const_reference val)
         {
-            node_type_pointer x = root;
-            const_reference greater = val;
-
-            while(!x->isLeaf())
+//            node_type_pointer r = root;
+//            node_type_pointer greater = leafNode;
+//            while(!r->isLeaf())
+//            {
+//
+//                if (!isLess(r, val)) {
+//                    greater = r;
+//                    r = r->getLeft();
+//                }
+//                else
+//                    r = r->getRight();
+//            }
+//            return iterator(greater);
+            node_type_pointer x = search(root, val);
+            if (!x->isLeaf())
             {
-                if (!isLess(x ,greater))
-                {
-                    greater = *x;
-                    x = x->getLeft();
-                }else
-                    x = x->getRight();
+              iterator v = iteratorAt(x);
+              v++;
+              return v;
             }
-            return x;
+            if (isLess(root, val))
+            {
+                iterator r = iterator(root);
+                while(r != end() && isLess(*r, val))
+                    r++;
+                return r;
+            }else
+            {
+                iterator r = iterator(root);
+                while(r != end() && isLess(*r, val))
+                    r--;
+                return r;
+            }
         }
 
-        size_t size() {
+        /*
+         * @Return: an iterator pointing to the first element in
+         * the container whose key is considered to go after k.
+         */
+        const_iterator upper_bound(const_reference val) const
+        {
+//            node_type_pointer r = root;
+//            node_type_pointer greater = leafNode;
+//            while(!r->isLeaf())
+//            {
+//                if (!isLess(r, val)) {
+//                    greater = r;
+//                    r = r->getLeft();
+//                }
+//                else
+//                    r = r->getRight();
+//            }
+//            return const_iterator(greater);
+            node_type_pointer x = search(root, val);
+            if (!x->isLeaf())
+            {
+                const_iterator v = const_iterator(x);
+                v++;
+                return v;
+            }
+            if (isLess(root, val))
+            {
+                const_iterator r = const_iterator(root);
+                while(isLess(*r, val))
+                    r++;
+                return r;
+            }else
+            {
+                const_iterator r = const_iterator(root);
+                while(isLess(*r, val))
+                    r--;
+                return r;
+            }
+        }
+        size_t size() const{
             return _size;
         }
 
-        bool isEmpty() {
+        bool isEmpty() const {
             return _size == 0 || root->isLeaf();
         }
 
         iterator begin() {
-            return iteratorAt(minimum(root));
+            return iteratorAt(_firstNode);
         }
 
         iterator end() {
@@ -211,26 +297,32 @@ namespace ft {
         }
 
         const_iterator cbegin() const {
-            return const_iteratorAt(minimum(root));
+
+            return const_iterator(_firstNode);
         }
 
         const_iterator cend() const {
-            return const_iteratorAt(leafNode);
+            return const_iterator (leafNode);
         }
-        size_t maxSize()
+        size_t maxSize() const
         {
             return _alloc.max_size();
         }
         void clear() {
             clearAll(root);
+            root = leafNode;
+            _size = 0;
+            _firstNode = root;
+            _lastNode = root;
         }
 
 
-        size_t count(const_reference val)
+        size_t count(const_reference val) const
         {
            return recursiveCount(root, 0 , val);
         }
-        void swap(___self &x)
+
+        void swap(_self &x)
         {
             allocator_type _allocX = x._alloc;
             value_node_alloc _value_node_allocX = x._value_node_alloc;
@@ -240,6 +332,8 @@ namespace ft {
             compare_type compareX = x.compare;
             node_type_pointer currentX = x.current;
             size_t _sizeX = x._size;
+            node_type_pointer beginX = x._firstNode;
+            node_type_pointer  endX = x._lastNode;
             x._alloc = _alloc;
             x._value_node_alloc = _value_node_alloc;
             x._leaf_node_alloc = _leaf_node_alloc;
@@ -248,6 +342,8 @@ namespace ft {
             x.compare = compare;
             x.current = current;
             x._size = _size;
+            x._firstNode  = _firstNode;
+            x._lastNode = _lastNode;
 
             _alloc = _allocX;
             _value_node_alloc = _value_node_allocX;
@@ -257,6 +353,12 @@ namespace ft {
             compare = compareX;
             current = currentX;
             _size = _sizeX;
+            _firstNode = beginX;
+            _lastNode = endX;
+
+
+
+
 
 
         }
@@ -273,13 +375,13 @@ namespace ft {
 #ifdef RED_BLACK_TREE_DEBUG
             log("after inserting ", false);
 #endif
-            updateLeafPrevs(current);
+            updateNodeOnInsert(current);
             if (isNew)
                 _size++;
             return ft::make_pair(iterator(current), isNew);
         }
 
-        node_type_pointer search(const_reference val) {
+        node_type_pointer search(const_reference val) const {
             return this->search(root, val);
         }
 
@@ -287,11 +389,30 @@ namespace ft {
             size_t lastSize = _size;
             deleteNode(node_optional::ofNullable(root), val);
             leafNode->setParent(null);
+            if (lastDeletedNode != null)
+                destroyNode(lastDeletedNode);
+            lastDeletedNode = null;
             #ifdef RED_BLACK_TREE_DEBUG
              log("after deleting  ", false);
             #endif
              return lastSize - _size;
         }
+        const_iterator erase(const_iterator _f) {
+            if (_f == end())
+                return end();
+            const_iterator  next = _f;
+            _f++;
+            deleteNode(node_optional::ofNullable(root), *next);
+            leafNode->setParent(null);
+            if (lastDeletedNode != null)
+                destroyNode(lastDeletedNode);
+            lastDeletedNode = null;
+#ifdef RED_BLACK_TREE_DEBUG
+            log("after deleting  ", false);
+#endif
+            return _f;
+        }
+
         bool validateTree()
         {
             if (root== null || root->isLeaf())
@@ -314,12 +435,12 @@ namespace ft {
         {
             return iterator(n);
         }
-        const_iterator const_iteratorAt(node_type_pointer n)
+        const_iterator const_iteratorAt(node_type_pointer n) const
         {
             return const_iterator(n);
         }
 
-        node_type_pointer search(node_type_pointer x, const_reference val) {
+        node_type_pointer search(node_type_pointer x, const_reference val)const {
             if (x->isLeaf() || isEqual(x, val))
                 return x;
             if (isLess(x, val))
@@ -343,8 +464,8 @@ namespace ft {
                 head->setLeft(insertValue(head->getLeft(), val, head, isNew));
             } else {
                 *isNew = false;
-                head->setValue(value2Pointer(val));
-            }
+                current = head;
+               }
             return head;
         }
 
@@ -536,13 +657,19 @@ namespace ft {
                 node_optional right = head.get()->getRightOptional();
                 if ((left.isPresent() && left.get()->isLeaf())
                     || (right.isPresent() && right.get()->isLeaf())) {
+                    // @Todo update leaf if equal
+                    if (lastDeletedNode == null)
+                      lastDeletedNode = cloneNode(head.get());
+                    updateNodeOnDelete();
                     deleteOneChild(head.get());
                     _size--;
                 } else {
                     node_type_pointer inorderSuccesor = minimum(head.get()->getRight());
-
+                    lastDeletedNode = cloneNode(head.get());
+//                    updateNodeOnDelete();
                     exchange(head.get(), inorderSuccesor);
-                    // @FIXME :: update leaf Node pointer to less and greate values
+//                    deleteOneChild(inorderSuccesor);
+//                    _size--;
                     deleteNode(head, *inorderSuccesor->getValue());
                 }
             }
@@ -712,7 +839,7 @@ namespace ft {
             executeDoubleBlackCase(CASE_0, x);
         }
 
-        node_type_pointer minimum(node_type_pointer n) {
+        node_type_pointer minimum(node_type_pointer n) const{
            return n->minimum()
            .orElseThrow(out_of_range_execption("minimum out of range"));
         }
@@ -729,7 +856,7 @@ namespace ft {
         {
            return x->predecessor().orElseThrow(out_of_range_execption("out of range"));
         }
-        size_t recursiveCount(node_type_pointer r, size_t count , const_reference val)
+        size_t recursiveCount(node_type_pointer r, size_t count , const_reference val) const
         {
             size_t c = 0;
             if (r->isLeaf())
@@ -766,36 +893,36 @@ namespace ft {
             return noRedRedParentChild(r->getLeft(), r->getColor())
             && noRedRedParentChild(r->getRight(), r->getColor());
         }
-        bool isEqual(const_reference a, const_reference b) {
+        bool isEqual(const_reference a, const_reference b) const{
             return isLess(a, b) == isLess(b, a);
         }
 
-        bool isEqual(node_type_pointer a, const_reference b) {
+        bool isEqual(node_type_pointer a, const_reference b) const{
             if (a->isLeaf())
                 return false;
 
             return isLess(*a->getValue(), b) == isLess(b, *a->getValue());
         }
 
-        bool isEqual(node_type_pointer x, node_type_pointer y) {
+        bool isEqual(node_type_pointer x, node_type_pointer y) const {
             if (y->isLeaf() || x->isLeaf())
                 return false;
-            isEqual(*x->getValue(), *y->getValue());
+           return  isEqual(*x->getValue(), *y->getValue());
         }
 
-        bool isLess(node_type_pointer a, node_type_pointer b) {
+        bool isLess(node_type_pointer a, node_type_pointer b) const{
             if (a->isLeaf() || b->isLeaf())
                 return false;
             return isLess(*a->getValue(), *b->getValue());
         }
 
-        bool isLess(node_type_pointer a, const_reference b) {
+        bool isLess(node_type_pointer a, const_reference b) const{
             if (a->isLeaf())
                 return false;
             return isLess(*a->getValue(), b);
         }
 
-        bool isLess(const_reference a, const_reference b) {
+        bool isLess(const_reference a, const_reference b) const{
             return compare(a, b);
         }
 
@@ -840,6 +967,8 @@ namespace ft {
            Color rhsColor = rhs->getColor();
             rhs->setColor(lhs->getColor());
             lhs->setColor(rhsColor);
+            if (rhs->isParentLeaf())
+                root =rhs;
 
         }
         void swapNodes(node_type_pointer u, node_type_pointer v)
@@ -876,6 +1005,7 @@ namespace ft {
                 u->setRight(vR.get());
                 u->makeMeTheParentOfMyChilds();
                 v->makeMeTheParentOfMyChilds();
+
                 //v->setColor(u->getColor());
         }
         void swapLeftChild(node_type_pointer x, node_type_pointer child)
@@ -945,23 +1075,82 @@ namespace ft {
             return c;
         }
 
-        void updateLeafPrevs(node_type_pointer  c)
+        void updateNodeOnInsert(node_type_pointer newNode)
         {
-            node_optional cOptional = node_optional ::ofNullable(c);
-            node_optional l = leafNode->getLastLessVisited();
-            node_optional g = leafNode->getLastGreatVisted();
-            if (l.isPresent() && isLess(c, l.get()))
-                leafNode->setLastLessVisted(cOptional);
-            else if (g.isPresent() && isLess(g.get(), c))
-                leafNode->setLastGreatVisted(cOptional);
-            else{
-                if (isLess(root, c))
+            if (_lastNode->isLeaf() || isLess(_lastNode, newNode) || newNode->isLeaf())
+                _lastNode = newNode;
+            if (_firstNode->isLeaf() || isLess(newNode , _firstNode) || newNode->isLeaf())
+                _firstNode = newNode;
+            leafNode->setLastGreatVisted(node_optional::ofNullable(_lastNode));
+            leafNode->setLastLessVisted(node_optional::ofNullable(_firstNode));
+        }
+
+        /*
+         *   case1 : the start node is about to be deleted
+         */
+        void updateNodeOnDelete()
+        {
+            if (lastDeletedNode != null) {
+                if (isEqual(_lastNode, lastDeletedNode))
                 {
-                    leafNode->setLastGreatVisted(cOptional);
-                }else
-                    leafNode->setLastLessVisted(cOptional);
+                    _lastNode = &(--(*_lastNode));
+                }
+                if (isEqual(_firstNode, lastDeletedNode))
+                {
+                    _firstNode = &(++(*_firstNode));
+                }
+                leafNode->setLastGreatVisted(node_optional::ofNullable(_lastNode));
+                leafNode->setLastLessVisted(node_optional::ofNullable(_firstNode));
             }
         }
+//        void updateLeafIfEqual(node_type_pointer c)
+//        {
+//            iterator cIter = iteratorAt(c);
+//            if (_beginNodeIterator == cIter && cIter != _leafNodeIterator)
+//            {
+//                _beginNodeIterator++;
+//                node_type_pointer cSuc = c++;
+//                if (!cSuc->isLeaf())
+//                    updateLeafPrevs(cSuc);
+//            }
+//            else if (_beginNodeIterator == _leafNodeIterator) {
+//                _beginNodeIterator = cIter;
+//                node_optional l = leafNode->getLastLessVisited();
+//                node_optional g = leafNode->getLastGreatVisted();
+//                node_optional cOptional = node_optional::ofNullable(c);
+//                if (l.isPresent() && isLess(c, l.get()))
+//                    leafNode->setLastLessVisted(cOptional);
+//                else if (g.isPresent() && isLess(g.get(), c))
+//                    leafNode->setLastGreatVisted(cOptional);
+//                else {
+//                    if (isLess(root, c)) {
+//                        leafNode->setLastGreatVisted(cOptional);
+//                    } else
+//                        leafNode->setLastLessVisted(cOptional);
+//                }
+//            }
+//        }
+//
+//        void updateLeafPrevs(node_type_pointer  c)
+//        {
+//            node_optional cOptional = node_optional::ofNullable(c);
+//            node_optional l = leafNode->getLastLessVisited();
+//            node_optional g = leafNode->getLastGreatVisted();
+//            if (_beginNodeIterator  == _leafNodeIterator
+//            || isLess(c , *_beginNodeIterator)) {
+//                _beginNodeIterator = iteratorAt(c);
+//            }
+//
+//            if (g.isPresent() && isLess(g.get(), c))
+//                leafNode->setLastGreatVisted(cOptional);
+//            if (l.isPresent() && isLess(c, l.get()))
+//                leafNode->setLastLessVisted(cOptional);
+//            if (!g.isPresent())
+//                leafNode->setLastGreatVisted(cOptional);
+//            if (!l.isPresent())
+//                leafNode->setLastLessVisted(cOptional);
+//
+//        }
 
         node_optional cloneNodeAndReplaceData(node_type_pointer x,
                                               const_reference v) {
@@ -1006,7 +1195,13 @@ namespace ft {
             _alloc.destroy(data);
             _alloc.deallocate(data, 1);
         }
-
+        node_type_pointer cloneNode(node_type_pointer n)
+        {
+            if (n->isLeaf())
+                return createLeafNode();
+            else
+                return createNode(*n->getValue(), n->getLeft(), n->getRight(), n->getParent());
+        }
         void destroyNode(node_type_pointer node) {
             if (!node->isLeaf()) {
                 destroyData(node->getValue());

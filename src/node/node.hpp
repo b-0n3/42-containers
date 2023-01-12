@@ -5,12 +5,12 @@
 #pragma  once
 
 #include <iostream>
-#include <iomanip>
+//#include <iomanip>
 #include <sstream>
 #include "color.hpp"
 #include "NodeType.hpp"
 #include "../utility/Forward.hpp"
-#include "../vector/Vector.hpp"
+
 #include "../optional/optional.hpp"
 
 namespace ft {
@@ -56,6 +56,17 @@ namespace ft {
                 lastGVisited(node_optional::empty()),
                 lastLessVisted(node_optional::empty())
         {}
+//        Node(value_type const value,node_pointer left, node_pointer right, node_pointer parent,
+//             Color c,
+//             node_optional lastGVisited, node_optional lastLessVisted):
+//                value(value),
+//                parent(parent),
+//                left(left),
+//                right(right),
+//                color(c),
+//                lastGVisited(lastGVisited),
+//                lastLessVisted(lastLessVisted)
+//        {}
         value_type value;
         node_pointer parent;
         node_pointer left;
@@ -63,6 +74,7 @@ namespace ft {
         Color color;
         node_optional lastGVisited;
         node_optional lastLessVisted;
+
 
 
     public:
@@ -80,14 +92,18 @@ namespace ft {
 
         virtual ~Node() {}
 
+//        operator Node< T, const ref>() const{
+//            return Node< T, const ref>
+//                    (value, left , right, parent,  color, lastGVisited, lastLessVisted);
+//        }
         Node(ft::Node<T, ref> const &rhs) :
                 value(rhs.value),
                 parent(rhs.parent),
                 left(rhs.left),
                 right(rhs.right),
                 color(rhs.color) ,
-                lastGVisited(node_optional::empty()),
-                lastLessVisted(node_optional::empty()){}
+                lastGVisited(rhs.lastGVisited),
+                lastLessVisted(rhs.lastLessVisted){}
 
         virtual size_t getHeight() = 0;
 
@@ -99,6 +115,8 @@ namespace ft {
             left = rhs.parent;
             right = rhs.right;
             color = rhs.color;
+            lastGVisited = rhs.lastGVisited;
+            lastLessVisted = rhs.lastLessVisted;
             return *this;
         }
 
@@ -113,7 +131,7 @@ namespace ft {
         {
             this->lastLessVisted = lastL;
         }
-        node_optional getLastLessVisited() {
+        node_optional getLastLessVisited() const{
            return lastLessVisted;
         }
 
@@ -123,7 +141,7 @@ namespace ft {
             this->lastGVisited = lastG;
         }
 
-        node_optional getLastGreatVisted()
+        node_optional getLastGreatVisted()  const
         {
             return lastGVisited;
         }
@@ -132,8 +150,8 @@ namespace ft {
             return *this->getValue();
         }
 
-        ref operator->() const{
-            return *this->getValue();
+        value_type operator->() const{
+            return this->getValue();
         }
 
         node_t &operator++()
@@ -235,7 +253,7 @@ namespace ft {
             return node_optional::ofNullable(y);
         }
 
-        node_optional getSiblingOptional()
+        node_optional getSiblingOptional() const
         {
 //            if (getType() == LEAF)
 //                return node_optional::empty();
@@ -250,19 +268,19 @@ namespace ft {
         }
 
 
-        node_optional  getParentOptional()
+        node_optional  getParentOptional() const
         {
              return node_optional::ofNullable(parent);
         }
 
-        node_optional getLeftOptional()
+        node_optional getLeftOptional() const
         {
             if (getType() == LEAF)
                 return node_optional::empty();
             return Optional<node_pointer>::ofNullable(left);
         }
 
-        node_optional getRightOptional()
+        node_optional getRightOptional() const
         {
             if (getType() == LEAF)
                 return node_optional::empty();
@@ -275,7 +293,7 @@ namespace ft {
             node_optional  r = getRightOptional();
             return r.isPresent() && r.get() == other;
         }
-        bool isMyLeftChild(node_pointer other)const
+        bool isMyLeftChild(node_pointer other) const
         {
             if (other == null)
                 return false;
@@ -306,15 +324,15 @@ namespace ft {
         {
             setColor(RED);
         }
-        void makeParentBlack()const
+        void makeParentBlack()
         {
             getParent()->makeMeBlack();
         }
-        void makeParentRed()const
+        void makeParentRed()
         {
             getParent()->makeMeRed();
         }
-        void makeMeTheParentOfMyChilds()const
+        void makeMeTheParentOfMyChilds()
         {
              if (!isLeftLeaf())
                  left->setParent(this);
@@ -330,14 +348,14 @@ namespace ft {
         {
             return getType() == LEAF;
         }
-        bool  isLeftLeaf()
+        bool  isLeftLeaf() const
         {
             if (getType() == LEAF)
                 return true;
             return getLeftOptional().isPresent()
             && left->isLeaf();
         }
-        bool isRightLeaf()
+        bool isRightLeaf() const
         {
             if (getType() == LEAF)
                 return true;
@@ -383,7 +401,7 @@ namespace ft {
         Color getColor() const {
             return color;
         }
-        bool whoAmI()
+        bool whoAmI() const
         {
            node_optional p = getParentOptional();
             if (p.isPresent())
